@@ -28,6 +28,7 @@ export class GameScreen {
   readonly session: GameSession;
   private readonly app: Application;
   private readonly worldLayer: Container;
+  private readonly connectionsLayer: Graphics;
   private readonly partsLayer: Container;
   private readonly viewBounds: { minX: number; minY: number; maxX: number; maxY: number };
   private readonly overlay: HTMLDivElement;
@@ -58,6 +59,8 @@ export class GameScreen {
     this.worldLayer = new Container();
     app.stage.addChild(this.worldLayer);
     this.worldLayer.addChild(this.drawBackground());
+    this.connectionsLayer = new Graphics();
+    this.worldLayer.addChild(this.connectionsLayer);
     this.partsLayer = new Container();
     this.worldLayer.addChild(this.partsLayer);
     this.fitWorld();
@@ -206,6 +209,61 @@ export class GameScreen {
     return g;
   }
 
+  /**
+   * ROPE/BELT/WIRE connections are physics constraints (GDD §1.4.3) with no
+   * rigid body of their own, so nothing drew them — a pulley level rendered
+   * only the wheel and the weight with no visible rope between them.
+   * RopeNetwork's own tension solver already resolves a ROPE to a chain of
+   * part-center positions (from -> routedThrough -> to); this mirrors that
+   * exact chain purely for drawing.
+   */
+  private drawConnections(): void {
+    const { color } = THEME;
+    this.connectionsLayer.clear();
+    const isEdit = this.session.state === 'EDIT';
+    const runtime = this.session.runtime;
+
+    const posOf = (id: string): { x: number; y: number } | undefined => {
+      if (isEdit || !runtime) {
+        const part = this.session.editorState.parts.find((p) => p.id === id);
+        return part ? { x: part.x, y: part.y } : undefined;
+      }
+      const part = runtime.get(id);
+      if (!part || runtime.isRemoved(id)) return undefined;
+      const t = part.rigidBody.translation();
+      return { x: t.x * SIM.PIXELS_PER_METER, y: t.y * SIM.PIXELS_PER_METER };
+    };
+
+    for (const conn of this.session.editorState.connections) {
+      const ids = [conn.from.partId, ...conn.routedThrough.map((r) => r.partId), conn.to.partId];
+      const pts = ids.map(posOf).filter((p): p is { x: number; y: number } => p !== undefined);
+      if (pts.length < 2) continue;
+
+      const g = this.connectionsLayer;
+      const first = pts[0]!;
+      if (conn.kind === 'BELT') {
+        g.moveTo(first.x, first.y);
+        for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
+        g.stroke({ width: 7, color: color.ink, alpha: 0.9 });
+        g.moveTo(first.x, first.y);
+        for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
+        g.stroke({ width: 2.5, color: color.inkSoft, alpha: 0.6 });
+      } else if (conn.kind === 'WIRE') {
+        g.moveTo(first.x, first.y);
+        for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
+        g.stroke({ width: 3, color: color.electricDark, alpha: 0.85 });
+      } else if (conn.kind === 'ROPE') {
+        // A thick base strand plus a thinner offset highlight fakes a twisted/braided look.
+        g.moveTo(first.x, first.y);
+        for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
+        g.stroke({ width: 4, color: color.woodDark });
+        g.moveTo(first.x, first.y);
+        for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
+        g.stroke({ width: 1.5, color: color.brass, alpha: 0.8 });
+      }
+    }
+  }
+
   private renderBin(): void {
     this.binEl.innerHTML = '';
     for (const [partType, count] of this.remainingCounts) {
@@ -321,6 +379,7 @@ export class GameScreen {
       this.partsLayer.addChild(sprite);
       this.editSprites.set(part.id, sprite);
     }
+    this.drawConnections();
   }
 
   private renderRuntimeState(): void {
@@ -358,6 +417,7 @@ export class GameScreen {
       sprite.position.set(t.x * SIM.PIXELS_PER_METER, t.y * SIM.PIXELS_PER_METER);
       sprite.rotation = body.rotation();
     }
+    this.drawConnections();
   }
 
   private onPlayPauseClick(): void {

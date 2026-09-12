@@ -150,6 +150,58 @@ function drawPulley(g: Graphics, radius: number): void {
   g.circle(0, 0, radius * 0.22).fill(color.brass).stroke(OUTLINE_THIN);
 }
 
+function drawBaseball(g: Graphics, radius: number): void {
+  dropShadow(g, radius * 2, radius * 2);
+  g.circle(0, 0, radius).fill(glossRadial(0xf3ead9)).stroke(OUTLINE);
+  // Two mirrored stitch arcs plus tick marks, the classic baseball seam.
+  for (const sign of [-1, 1] as const) {
+    g.moveTo(sign * radius * 0.62, -radius * 0.62).quadraticCurveTo(sign * radius * 0.18, 0, sign * radius * 0.62, radius * 0.62).stroke({ width: 1.6, color: color.danger });
+    for (let t = 0.12; t < 0.95; t += 0.16) {
+      const midX = sign * radius * (0.62 - 0.44 * Math.sin(t * Math.PI));
+      const midY = -radius * 0.62 + radius * 1.24 * t;
+      const nx = Math.cos(t * Math.PI) * sign;
+      const ny = Math.sin(t * Math.PI);
+      g.moveTo(midX - nx * 3, midY - ny * 3).lineTo(midX + nx * 3, midY + ny * 3).stroke({ width: 1.2, color: color.danger, alpha: 0.85 });
+    }
+  }
+  glossHighlight(g, radius);
+}
+
+function drawSpring(g: Graphics, w: number, h: number): void {
+  dropShadow(g, w, h);
+  const baseH = h * 0.22;
+  g.roundRect(-w / 2, h / 2 - baseH, w, baseH, 3).fill(bevelVertical(color.steelDark)).stroke(OUTLINE);
+  const coilTop = -h / 2 + h * 0.16;
+  const coilBottom = h / 2 - baseH;
+  const coils = 5;
+  const coilW = w * 0.36;
+  g.moveTo(-coilW / 2, coilBottom);
+  for (let i = 0; i <= coils; i++) {
+    const t = i / coils;
+    const y = coilBottom + (coilTop - coilBottom) * t;
+    const x = (i % 2 === 0 ? -1 : 1) * coilW / 2;
+    g.lineTo(x, y);
+  }
+  g.stroke({ width: Math.max(2.5, w * 0.09), color: color.steel });
+  g.roundRect(-w / 2, -h / 2, w, h * 0.22, 4).fill(glossRadial(color.danger)).stroke(OUTLINE);
+}
+
+function drawMetalCrate(g: Graphics, w: number, h: number): void {
+  dropShadow(g, w, h);
+  g.roundRect(-w / 2, -h / 2, w, h, 3).fill(bevelVertical(color.steel)).stroke(OUTLINE);
+  g.moveTo(-w / 2, -h / 2).lineTo(w / 2, h / 2).stroke({ width: 2.5, color: color.steelDark, alpha: 0.8 });
+  g.moveTo(w / 2, -h / 2).lineTo(-w / 2, h / 2).stroke({ width: 2.5, color: color.steelDark, alpha: 0.8 });
+  g.rect(-w / 2, -h / 2, w, Math.max(1.5, h * 0.16)).fill({ color: 0xffffff, alpha: 0.3 });
+  const inset = Math.min(w, h) * 0.14;
+  const corners: [number, number][] = [
+    [-w / 2 + inset, -h / 2 + inset],
+    [w / 2 - inset, -h / 2 + inset],
+    [-w / 2 + inset, h / 2 - inset],
+    [w / 2 - inset, h / 2 - inset],
+  ];
+  for (const [sx, sy] of corners) g.circle(sx, sy, Math.min(w, h) * 0.055).fill(color.steelDark).stroke(OUTLINE_THIN);
+}
+
 function drawPowerPanel(g: Graphics, w: number, h: number, accent: number): void {
   dropShadow(g, w, h);
   g.roundRect(-w / 2, -h / 2, w, h, 5).fill(bevelVertical(color.inkSoft)).stroke(OUTLINE);
@@ -201,11 +253,20 @@ function drawCandle(g: Graphics, w: number, h: number): void {
 
 function drawBarrel(g: Graphics, w: number, h: number): void {
   dropShadow(g, w, h);
-  g.roundRect(-w / 2, -h / 2, w, h, w * 0.2).fill(bevelVertical(color.dangerDark)).stroke(OUTLINE);
-  for (const frac of [-0.28, 0.02, 0.32]) {
-    g.rect(-w / 2, h * frac - 2.5, w, 5).fill(0xfdf3e0);
+  // A bundle of dynamite-style sticks strapped together, rather than a single barrel silhouette.
+  const sticks = Math.max(3, Math.round(w / (h * 0.42)));
+  const stickW = w / sticks;
+  for (let i = 0; i < sticks; i++) {
+    const cx = -w / 2 + stickW * (i + 0.5);
+    g.roundRect(cx - stickW * 0.38, -h / 2, stickW * 0.76, h, stickW * 0.18).fill(bevelVertical(color.dangerDark)).stroke(OUTLINE_THIN);
   }
-  g.rect(-w / 2, -h / 2, w, Math.max(1.5, h * 0.18)).fill({ color: 0xffffff, alpha: 0.22 });
+  for (const frac of [-0.22, 0.22]) {
+    g.rect(-w / 2, h * frac - 2.5, w, 5).fill(0x4a443c);
+  }
+  g.roundRect(-w / 2, -h / 2, w, h, w * 0.08).stroke(OUTLINE);
+  // A short sparking fuse poking out the top.
+  g.moveTo(0, -h / 2).quadraticCurveTo(w * 0.18, -h / 2 - h * 0.22, w * 0.06, -h / 2 - h * 0.36).stroke({ width: 2, color: 0xc99a6f });
+  g.circle(w * 0.06, -h / 2 - h * 0.36, 3).fill(glossRadial(color.electric));
 }
 
 const CATEGORY_FALLBACK: Record<PartDef['category'], number> = {
@@ -260,6 +321,15 @@ export function spriteForPart(def: PartDef): Graphics {
       return g;
     case 'charge_barrel':
       drawBarrel(g, w, h);
+      return g;
+    case 'ball_baseball':
+      drawBaseball(g, w / 2);
+      return g;
+    case 'spring_bouncer':
+      drawSpring(g, w, h);
+      return g;
+    case 'crate_metal':
+      drawMetalCrate(g, w, h);
       return g;
     default:
       break;

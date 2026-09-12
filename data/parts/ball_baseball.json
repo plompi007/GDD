@@ -1,0 +1,25 @@
+{
+  "partType": "ball_baseball",
+  "displayKey": "part.ball_baseball",
+  "category": "DYNAMIC",
+  "tier": "P1",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 0.35 },
+    "mass": 1.0,
+    "restitution": 0.3,
+    "friction": 0.4,
+    "gravityScale": 1.0
+  },
+  "tags": [],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "rotationSnap": 0,
+    "flippable": false,
+    "sprite": "parts/ball_baseball.png",
+    "binIcon": "icons/ball_baseball.svg"
+  },
+  "params": {}
+}

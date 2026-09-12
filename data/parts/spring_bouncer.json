@@ -1,0 +1,23 @@
+{
+  "partType": "spring_bouncer",
+  "displayKey": "part.spring_bouncer",
+  "category": "ACTUATOR",
+  "tier": "P1",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 1.0, "h": 0.5 },
+    "restitution": 1.15,
+    "friction": 0.1
+  },
+  "tags": ["BOUNCY"],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 15,
+    "flippable": false,
+    "sprite": "parts/spring_bouncer.png",
+    "binIcon": "icons/spring_bouncer.svg"
+  },
+  "params": {}
+}
