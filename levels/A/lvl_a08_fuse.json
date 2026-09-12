@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a08_fuse",
+  "title": "הפתיל",
+  "chapter": "A_FOUNDATIONS",
+  "order": 8,
+  "difficulty": 1,
+  "goalText": "תן לאש להגיע למטען הנפץ ולפוצץ את הקיר.",
+  "hints": ["הנר מצית את הפתיל. הפתיל בוער בקצב קבוע.", "בסוף הפתיל יש מטען נפץ."],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30, "theme": "brass_timber" },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 800, "y": 1180 },
+    { "id": "candle", "partType": "candle", "x": 300, "y": 900 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 380, "y": 900, "rotation": 0, "params": { "length": 5 } },
+    { "id": "barrel", "partType": "charge_barrel", "x": 460, "y": 900, "params": { "radius": 3, "power": 3 } },
+    { "id": "wall", "partType": "wall_brick", "x": 500, "y": 900 }
+  ],
+  "preplacedParts": [],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "DESTROYED", "targetId": "wall" }
+  ],
+  "failConditions": [
+    { "type": "TIMEOUT", "holdMs": 0 }
+  ],
+  "solutions": [
+    { "label": "הפתיל בוער מעצמו", "parts": [], "connections": [] }
+  ]
+}

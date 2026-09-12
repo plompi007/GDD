@@ -1,0 +1,27 @@
+{
+  "partType": "fuse_cord",
+  "displayKey": "part.fuse_cord",
+  "category": "THERMAL",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 5, "h": 0.15 },
+    "isSensor": true
+  },
+  "tags": ["FLAMMABLE"],
+  "ports": [
+    { "id": "in", "dir": "IN", "energy": "THERMAL", "offset": { "x": -2.5, "y": 0 } },
+    { "id": "out", "dir": "OUT", "energy": "THERMAL", "offset": { "x": 2.5, "y": 0 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 15,
+    "flippable": false,
+    "sprite": "parts/fuse_cord.png",
+    "binIcon": "icons/fuse_cord.svg"
+  },
+  "params": {
+    "length": { "type": "number", "min": 1, "max": 10, "step": 0.5, "default": 5 }
+  }
+}

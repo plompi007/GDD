@@ -1,0 +1,26 @@
+{
+  "partType": "gear_small",
+  "displayKey": "part.gear_small",
+  "category": "MECHANISM",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "ball", "radius": 0.35 },
+    "friction": 0.2
+  },
+  "tags": ["METALLIC"],
+  "ports": [
+    { "id": "rot", "dir": "OUT", "energy": "ROTARY", "offset": { "x": 0, "y": 0 } }
+  ],
+  "anchors": [
+    { "idx": 0, "kind": "ROTARY", "offset": { "x": 0, "y": 0 } }
+  ],
+  "editor": {
+    "rotatable": false,
+    "rotationSnap": 0,
+    "flippable": false,
+    "sprite": "parts/gear_small.png",
+    "binIcon": "icons/gear_small.svg"
+  },
+  "params": {}
+}

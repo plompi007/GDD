@@ -1,0 +1,27 @@
+{
+  "partType": "fan_blower",
+  "displayKey": "part.fan_blower",
+  "category": "PNEUMATIC",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 1, "h": 1 }
+  },
+  "tags": ["METALLIC"],
+  "ports": [
+    { "id": "pwr", "dir": "IN", "energy": "ELECTRIC", "offset": { "x": -0.5, "y": 0 } },
+    { "id": "out", "dir": "OUT", "energy": "PNEUMATIC", "offset": { "x": 0.5, "y": 0 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 15,
+    "flippable": true,
+    "sprite": "parts/fan_blower.png",
+    "binIcon": "icons/fan_blower.svg"
+  },
+  "params": {
+    "power": { "type": "number", "min": 1, "max": 3, "step": 1, "default": 2 },
+    "range": { "type": "number", "min": 2, "max": 12, "step": 0.5, "default": 6 }
+  }
+}

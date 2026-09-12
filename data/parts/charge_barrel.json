@@ -1,0 +1,27 @@
+{
+  "partType": "charge_barrel",
+  "displayKey": "part.charge_barrel",
+  "category": "THERMAL",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 0.8, "h": 0.8 }
+  },
+  "tags": ["DESTRUCTIBLE"],
+  "ports": [
+    { "id": "in", "dir": "IN", "energy": "THERMAL", "offset": { "x": 0, "y": 0 } },
+    { "id": "out", "dir": "OUT", "energy": "IMPACT", "offset": { "x": 0, "y": 0 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "rotationSnap": 0,
+    "flippable": false,
+    "sprite": "parts/charge_barrel.png",
+    "binIcon": "icons/charge_barrel.svg"
+  },
+  "params": {
+    "power": { "type": "number", "min": 1, "max": 5, "step": 1, "default": 3 },
+    "radius": { "type": "number", "min": 1, "max": 8, "step": 0.5, "default": 3 }
+  }
+}

@@ -5,7 +5,7 @@ describe('PartRegistry', () => {
   it('loads and validates every data/parts/*.json file', () => {
     const registry = loadPartRegistry();
     const all = registry.all();
-    expect(all.length).toBeGreaterThanOrEqual(15);
+    expect(all.length).toBeGreaterThanOrEqual(25);
   });
 
   it('has no duplicate partType across files', () => {
@@ -33,6 +33,29 @@ describe('PartRegistry', () => {
       'bin_target',
       'zone_goal',
     ]) {
+      expect(registry.has(partType), `missing part: ${partType}`).toBe(true);
+      expect(registry.get(partType).tier).toBe('P0');
+    }
+  });
+
+  it('exposes the M4 mechanism/power parts', () => {
+    const registry = loadPartRegistry();
+    for (const [partType, tier] of [
+      ['outlet_power', 'P0'],
+      ['motor_electric', 'P0'],
+      ['gear_small', 'P0'],
+      ['gear_large', 'P0'],
+      ['pulley_wheel', 'P0'],
+      ['conveyor', 'P1'],
+    ] as const) {
+      expect(registry.has(partType), `missing part: ${partType}`).toBe(true);
+      expect(registry.get(partType).tier).toBe(tier);
+    }
+  });
+
+  it('exposes the M4 thermal and field parts', () => {
+    const registry = loadPartRegistry();
+    for (const partType of ['candle', 'fuse_cord', 'charge_barrel', 'fan_blower']) {
       expect(registry.has(partType), `missing part: ${partType}`).toBe(true);
       expect(registry.get(partType).tier).toBe('P0');
     }

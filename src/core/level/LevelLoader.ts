@@ -37,7 +37,13 @@ export function buildSimFromEditorState(
       y: part.y / SIM.PIXELS_PER_METER,
       rotation: (part.rotation * Math.PI) / 180,
     });
-    runtime.register({ id: part.id, def, rigidBody, collider, tags: part.tags });
+    const params: Record<string, number | string | boolean> = {};
+    for (const [key, spec] of Object.entries(def.params)) params[key] = spec.default;
+    Object.assign(params, part.params);
+    // Tags are the union of the part type's inherent material tags (FLAMMABLE,
+    // DESTRUCTIBLE, ...) and this instance's own gameplay tags (SUBJECT, ...).
+    const tags = [...new Set([...def.tags, ...part.tags])];
+    runtime.register({ id: part.id, def, rigidBody, collider, tags, params, state: {} });
   }
   return runtime;
 }

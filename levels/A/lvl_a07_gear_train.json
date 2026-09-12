@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a07_gear_train",
+  "title": "גלגלי שיניים",
+  "chapter": "A_FOUNDATIONS",
+  "order": 7,
+  "difficulty": 1,
+  "goalText": "תן למסוע להוביל את הכדור אל תוך האזור.",
+  "hints": ["המנוע מסובב גלגל שיניים אחד, וזה מסובב את השני.", "המסוע זז כשמגיע אליו סיבוב."],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30, "theme": "brass_timber" },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 800, "y": 1180 },
+    { "id": "outlet", "partType": "outlet_power", "x": 200, "y": 900 },
+    { "id": "motor", "partType": "motor_electric", "x": 400, "y": 900, "params": { "rpm": 120, "direction": "CW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 424, "y": 900 },
+    { "id": "gear2", "partType": "gear_large", "x": 454, "y": 900 },
+    { "id": "belt_conveyor", "partType": "conveyor", "x": 700, "y": 1050, "rotation": 0 },
+    { "id": "goal", "partType": "zone_goal", "x": 665, "y": 1033 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_iron", "x": 700, "y": 1000, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "wire1", "kind": "WIRE", "from": { "partId": "outlet" }, "to": { "partId": "motor" } },
+    { "id": "belt1", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "belt_conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal", "holdMs": 0 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT", "holdMs": 0 },
+    { "type": "TIMEOUT", "holdMs": 0 }
+  ],
+  "solutions": [
+    { "label": "המנוע כבר מחובר", "parts": [], "connections": [] }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "partType": "motor_electric",
+  "displayKey": "part.motor_electric",
+  "category": "POWER",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 1.5, "h": 1.5 },
+    "friction": 0.3,
+    "restitution": 0.1
+  },
+  "tags": ["METALLIC"],
+  "ports": [
+    { "id": "pwr", "dir": "IN", "energy": "ELECTRIC", "offset": { "x": -0.75, "y": 0 } },
+    { "id": "out", "dir": "OUT", "energy": "ROTARY", "offset": { "x": 0.75, "y": 0 } }
+  ],
+  "anchors": [
+    { "idx": 0, "kind": "ROTARY", "offset": { "x": 0.75, "y": 0 } }
+  ],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 90,
+    "flippable": true,
+    "sprite": "parts/motor_electric.png",
+    "binIcon": "icons/motor_electric.svg"
+  },
+  "params": {
+    "rpm": { "type": "number", "min": 1, "max": 600, "step": 10, "default": 180 },
+    "direction": { "type": "enum", "values": ["CW", "CCW"], "default": "CW" }
+  }
+}

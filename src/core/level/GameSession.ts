@@ -1,4 +1,9 @@
 import type { PartRegistry } from '../parts/PartRegistry.ts';
+import { updateElectricBus } from '../graph/ElectricBus.ts';
+import { applyFields } from '../graph/FieldSystem.ts';
+import { applyConveyorSurfaces, applyGearTrain } from '../graph/GearTrain.ts';
+import { solveRopeTension } from '../graph/RopeNetwork.ts';
+import { updateThermalSystem } from '../graph/ThermalSystem.ts';
 import { SIM } from '../sim/constants.ts';
 import { FixedStepLoop } from '../sim/FixedStepLoop.ts';
 import { SimWorld } from '../sim/SimWorld.ts';
@@ -74,7 +79,16 @@ export class GameSession {
 
   private tick(): void {
     if (!this.simWorld || !this.runtime) return;
+
+    // GDD §2.4's tick order is load-bearing for determinism — don't reorder.
+    updateElectricBus(this.runtime, this.editorState.connections);
+    updateThermalSystem(this.simWorld.rapier, this.runtime, SIM.FIXED_DT, this.simWorld.simTime * 1000);
+    applyFields(this.runtime);
+    solveRopeTension(this.runtime, this.editorState.connections);
+    applyGearTrain(this.runtime, this.editorState.connections);
     this.simWorld.step();
+    applyConveyorSurfaces(this.simWorld.rapier, this.runtime);
+
     // Once SOLVED the simulation keeps running briefly for the win celebration
     // (GDD §2.3) but win/fail conditions are no longer re-evaluated.
     if (this.state !== 'RUNNING') return;

@@ -1,0 +1,24 @@
+{
+  "partType": "conveyor",
+  "displayKey": "part.conveyor",
+  "category": "MECHANISM",
+  "tier": "P1",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 3, "h": 0.4 },
+    "friction": 0.9
+  },
+  "tags": [],
+  "ports": [
+    { "id": "rot", "dir": "IN", "energy": "ROTARY", "offset": { "x": -1.5, "y": 0 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 90,
+    "flippable": false,
+    "sprite": "parts/conveyor.png",
+    "binIcon": "icons/conveyor.svg"
+  },
+  "params": {}
+}

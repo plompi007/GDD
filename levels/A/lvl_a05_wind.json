@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a05_wind",
+  "title": "רוח בגב",
+  "chapter": "A_FOUNDATIONS",
+  "order": 5,
+  "difficulty": 1,
+  "goalText": "תן לרוח לדחוף את הבלון אל תוך האזור.",
+  "hints": ["המאוורר פועל כל עוד יש לו חשמל.", "הבלון קליל ומגיב חזק לרוח."],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30, "theme": "brass_timber" },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 800, "y": 1180 },
+    { "id": "outlet", "partType": "outlet_power", "x": 200, "y": 900 },
+    { "id": "fan", "partType": "fan_blower", "x": 300, "y": 900, "rotation": 0, "params": { "power": 2, "range": 6 } },
+    { "id": "goal", "partType": "zone_goal", "x": 500, "y": 900 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "balloon_lift", "x": 330, "y": 900, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "wire1", "kind": "WIRE", "from": { "partId": "outlet" }, "to": { "partId": "fan" } }
+  ],
+  "winConditions": [
+    { "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal", "holdMs": 0 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT", "holdMs": 0 },
+    { "type": "TIMEOUT", "holdMs": 0 }
+  ],
+  "solutions": [
+    { "label": "הרוח דוחפת מעצמה", "parts": [], "connections": [] }
+  ]
+}
