@@ -62,6 +62,51 @@ async function dragDropAndSolveBridge(page) {
 }
 
 /**
+ * lvl_b01_bounce_combo (the project's first Chapter B "combo" level) reuses
+ * lvl_a02_bridge's exact bridging geometry, then extends the causal chain
+ * onto a gear-driven conveyor. Headless replay of the authored solution
+ * isn't enough on its own here — a real drag-and-drop placement snaps to
+ * SIM.GRID (16px) rather than landing on the authored floating-point
+ * position, and this level's chain is long enough that a small placement
+ * difference can matter. This exercises the real grid-snapped placement,
+ * not just the exact authored coordinates.
+ */
+async function dragDropAndSolveBridgeCombo(page) {
+  await page.click('button[data-level-id="lvl_b01_bounce_combo"]');
+  await page.waitForSelector('[data-testid="bin-plank_wood"]');
+
+  const binBtn = page.locator('[data-testid="bin-plank_wood"]');
+  const box = await binBtn.boundingBox();
+  if (!box) throw new Error('bin button not visible');
+  const canvasBox = await page.locator('canvas').boundingBox();
+  if (!canvasBox) throw new Error('canvas not visible');
+  const localTarget = await page.evaluate(() => window.__gameScreen?.worldToScreen(432, 711));
+  if (!localTarget) throw new Error('worldToScreen unavailable on window.__gameScreen');
+  const dropTarget = { x: canvasBox.x + localTarget.x, y: canvasBox.y + localTarget.y };
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(dropTarget.x, dropTarget.y, { steps: 10 });
+  await page.mouse.up();
+  await page.waitForTimeout(50);
+
+  await page.click('[data-testid="play-pause"]');
+  const solved = await page.waitForFunction(
+    () => window.__gameScreen?.session.state === 'SOLVED' || window.__gameScreen?.session.state === 'FAILED',
+    undefined,
+    { timeout: 30_000 },
+  );
+  const state = await solved.evaluate(() => window.__gameScreen?.session.state);
+  if (state !== 'SOLVED') {
+    throw new Error(`expected lvl_b01_bounce_combo to reach SOLVED after a real (grid-snapped) bridge placement, got ${state}`);
+  }
+  console.log('  ✓ lvl_b01_bounce_combo: a real (grid-snapped) bridge placement still reaches SOLVED');
+
+  await page.click('[data-testid="back-to-menu"]');
+  await page.waitForSelector('.cw-level-grid');
+}
+
+/**
  * Regression test for a real crash found via visual QA: GameScreen cached
  * {sprite, body} for every part at play() time, but never dropped the entry
  * when ThermalSystem later frees that part's Rapier body mid-RUNNING (here,
@@ -100,6 +145,7 @@ async function main() {
     await page.waitForSelector('button[data-level-id="lvl_a02_bridge"]');
 
     await dragDropAndSolveBridge(page);
+    await dragDropAndSolveBridgeCombo(page);
     await playThroughRemovalWithoutCrashing(page);
 
     if (pageErrors.length > 0) {
