@@ -14,9 +14,12 @@ async function dragDropAndSolveBridge(page) {
   if (!box) throw new Error('bin button not visible');
   const canvasBox = await page.locator('canvas').boundingBox();
   if (!canvasBox) throw new Error('canvas not visible');
-  // The level's world is 1600x1200 and the viewport is 800x600, so CONTAIN-fit scale is 0.5.
-  const worldToScreen = (wx, wy) => ({ x: canvasBox.x + wx * 0.5, y: canvasBox.y + wy * 0.5 });
-  const dropTarget = worldToScreen(432, 711);
+  // GameScreen frames the camera on the level's placed content rather than its
+  // declared world box (see computeViewBounds), so the scale/pan varies by
+  // level — ask the live screen for the real transform instead of assuming one.
+  const localTarget = await page.evaluate(() => window.__gameScreen?.worldToScreen(432, 711));
+  if (!localTarget) throw new Error('worldToScreen unavailable on window.__gameScreen');
+  const dropTarget = { x: canvasBox.x + localTarget.x, y: canvasBox.y + localTarget.y };
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();

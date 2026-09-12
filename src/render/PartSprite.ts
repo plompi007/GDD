@@ -1,4 +1,4 @@
-import { Graphics } from 'pixi.js';
+import { FillGradient, Graphics } from 'pixi.js';
 import type { PartDef } from '../core/parts/PartDef.ts';
 import { SIM } from '../core/sim/constants.ts';
 import { THEME } from './theme.ts';
@@ -7,27 +7,83 @@ const { color } = THEME;
 const OUTLINE = { width: 2.5, color: color.outline, alignment: 1 as const };
 const OUTLINE_THIN = { width: 1.5, color: color.outline, alignment: 1 as const };
 
+function lighten(hex: number, t: number): number {
+  const r = (hex >> 16) & 0xff;
+  const g = (hex >> 8) & 0xff;
+  const b = hex & 0xff;
+  return (Math.round(r + (255 - r) * t) << 16) | (Math.round(g + (255 - g) * t) << 8) | Math.round(b + (255 - b) * t);
+}
+
+function darken(hex: number, t: number): number {
+  const r = (hex >> 16) & 0xff;
+  const g = (hex >> 8) & 0xff;
+  const b = hex & 0xff;
+  return (Math.round(r * (1 - t)) << 16) | (Math.round(g * (1 - t)) << 8) | Math.round(b * (1 - t));
+}
+
+/** A soft top-left-lit glossy sphere gradient — the main lever for a "3D toy" feel over a flat fill. */
+function glossRadial(base: number): FillGradient {
+  return new FillGradient({
+    type: 'radial',
+    center: { x: 0.32, y: 0.28 },
+    innerRadius: 0,
+    outerCenter: { x: 0.5, y: 0.5 },
+    outerRadius: 0.78,
+    colorStops: [
+      { offset: 0, color: lighten(base, 0.5) },
+      { offset: 0.55, color: base },
+      { offset: 1, color: darken(base, 0.32) },
+    ],
+    textureSpace: 'local',
+  });
+}
+
+/** A gentle top-to-bottom bevel for flat panels (planks, beams, barrels) — light edge up top, shade down low. */
+function bevelVertical(base: number): FillGradient {
+  return new FillGradient({
+    type: 'linear',
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 1 },
+    colorStops: [
+      { offset: 0, color: lighten(base, 0.32) },
+      { offset: 0.45, color: base },
+      { offset: 1, color: darken(base, 0.28) },
+    ],
+    textureSpace: 'local',
+  });
+}
+
 function glossHighlight(g: Graphics, radius: number): void {
-  g.ellipse(-radius * 0.32, -radius * 0.35, radius * 0.4, radius * 0.28).fill({ color: 0xffffff, alpha: 0.55 });
+  g.ellipse(-radius * 0.32, -radius * 0.36, radius * 0.32, radius * 0.2).fill({ color: 0xffffff, alpha: 0.65 });
+}
+
+/** A soft, faked-blur contact shadow beneath a shape, grounding it against the playfield. */
+function dropShadow(g: Graphics, w: number, h: number): void {
+  const cy = h / 2;
+  g.ellipse(0, cy + 3, w * 0.46, h * 0.22).fill({ color: 0x000000, alpha: 0.1 });
+  g.ellipse(0, cy + 1, w * 0.36, h * 0.15).fill({ color: 0x000000, alpha: 0.14 });
 }
 
 function drawBall(g: Graphics, radius: number, fill: number): void {
-  g.circle(0, 0, radius).fill(fill).stroke(OUTLINE);
+  dropShadow(g, radius * 2, radius * 2);
+  g.circle(0, 0, radius).fill(glossRadial(fill)).stroke(OUTLINE);
   glossHighlight(g, radius);
 }
 
 function drawWoodPlank(g: Graphics, w: number, h: number): void {
+  dropShadow(g, w, h);
   const r = Math.min(6, h / 3);
-  g.roundRect(-w / 2, -h / 2, w, h, r).fill(color.wood).stroke(OUTLINE);
+  g.roundRect(-w / 2, -h / 2, w, h, r).fill(bevelVertical(color.wood)).stroke(OUTLINE);
   const stripeCount = Math.max(1, Math.floor(w / 44));
   for (let i = 1; i <= stripeCount; i++) {
     const x = -w / 2 + (w / (stripeCount + 1)) * i;
     g.moveTo(x, -h / 2 + 3).lineTo(x, h / 2 - 3).stroke({ width: 2, color: color.woodDark, alpha: 0.6 });
   }
+  g.rect(-w / 2, -h / 2, w, Math.max(1.5, h * 0.22)).fill({ color: 0xffffff, alpha: 0.3 });
 }
 
 function drawFloor(g: Graphics, w: number, h: number): void {
-  g.rect(-w / 2, -h / 2, w, h).fill(color.wood).stroke(OUTLINE);
+  g.rect(-w / 2, -h / 2, w, h).fill(bevelVertical(color.wood)).stroke(OUTLINE);
   const plankWidth = 90;
   const count = Math.ceil(w / plankWidth);
   for (let i = 1; i < count; i++) {
@@ -38,13 +94,15 @@ function drawFloor(g: Graphics, w: number, h: number): void {
 }
 
 function drawMetalBeam(g: Graphics, w: number, h: number): void {
-  g.roundRect(-w / 2, -h / 2, w, h, 3).fill(color.steel).stroke(OUTLINE);
-  g.rect(-w / 2, -h / 2, w, Math.max(2, h * 0.25)).fill({ color: 0xffffff, alpha: 0.35 });
+  dropShadow(g, w, h);
+  g.roundRect(-w / 2, -h / 2, w, h, 3).fill(bevelVertical(color.steel)).stroke(OUTLINE);
+  g.rect(-w / 2, -h / 2, w, Math.max(2, h * 0.28)).fill({ color: 0xffffff, alpha: 0.4 });
   for (const bx of [-w / 2 + 9, w / 2 - 9]) g.circle(bx, 0, Math.min(3.5, h / 3)).fill(color.steelDark).stroke(OUTLINE_THIN);
 }
 
 function drawBrick(g: Graphics, w: number, h: number): void {
-  g.roundRect(-w / 2, -h / 2, w, h, 3).fill(0xd97455).stroke(OUTLINE);
+  dropShadow(g, w, h);
+  g.roundRect(-w / 2, -h / 2, w, h, 3).fill(bevelVertical(0xd97455)).stroke(OUTLINE);
   const rows = Math.max(1, Math.round(h / 20));
   const rowH = h / rows;
   for (let r = 0; r < rows; r++) {
@@ -56,12 +114,12 @@ function drawBrick(g: Graphics, w: number, h: number): void {
 }
 
 function drawGear(g: Graphics, radius: number): void {
+  dropShadow(g, radius * 2, radius * 2);
   const teeth = radius > 0.45 * SIM.PIXELS_PER_METER ? 12 : 8;
   const toothLen = radius * 0.24;
   const dTheta = (Math.PI / teeth) * 0.4;
   const outer = radius + toothLen;
 
-  g.circle(0, 0, radius).fill(color.brass);
   for (let i = 0; i < teeth; i++) {
     const a = (i / teeth) * Math.PI * 2;
     g.poly([
@@ -73,15 +131,17 @@ function drawGear(g: Graphics, radius: number): void {
       Math.sin(a + dTheta) * outer,
       Math.cos(a + dTheta) * radius,
       Math.sin(a + dTheta) * radius,
-    ]).fill(color.brass);
+    ]).fill(color.brassDark);
   }
+  g.circle(0, 0, radius).fill(glossRadial(color.brass));
   g.circle(0, 0, radius + toothLen).stroke(OUTLINE);
-  g.circle(0, 0, radius * 0.55).fill(color.brassDark).stroke(OUTLINE_THIN);
+  g.circle(0, 0, radius * 0.55).fill(glossRadial(color.steel)).stroke(OUTLINE_THIN);
   g.circle(0, 0, radius * 0.16).fill(color.ink);
 }
 
 function drawPulley(g: Graphics, radius: number): void {
-  g.circle(0, 0, radius).fill(color.steel).stroke(OUTLINE);
+  dropShadow(g, radius * 2, radius * 2);
+  g.circle(0, 0, radius).fill(glossRadial(color.steel)).stroke(OUTLINE);
   g.circle(0, 0, radius * 0.85).stroke({ width: 2.5, color: color.brass });
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
@@ -91,9 +151,10 @@ function drawPulley(g: Graphics, radius: number): void {
 }
 
 function drawPowerPanel(g: Graphics, w: number, h: number, accent: number): void {
-  g.roundRect(-w / 2, -h / 2, w, h, 5).fill(color.inkSoft).stroke(OUTLINE);
-  g.roundRect(-w / 2 + 4, -h / 2 + 4, w - 8, h - 8, 4).fill(color.steel);
-  g.circle(0, 0, Math.min(w, h) * 0.22).fill(accent).stroke(OUTLINE_THIN);
+  dropShadow(g, w, h);
+  g.roundRect(-w / 2, -h / 2, w, h, 5).fill(bevelVertical(color.inkSoft)).stroke(OUTLINE);
+  g.roundRect(-w / 2 + 4, -h / 2 + 4, w - 8, h - 8, 4).fill(bevelVertical(color.steel));
+  g.circle(0, 0, Math.min(w, h) * 0.22).fill(glossRadial(accent)).stroke(OUTLINE_THIN);
   const corners: [number, number][] = [
     [-w / 2 + 6, -h / 2 + 6],
     [w / 2 - 6, -h / 2 + 6],
@@ -121,7 +182,8 @@ function drawSensorZone(g: Graphics, w: number, hgt: number, kind: 'ball' | 'box
 }
 
 function drawFlammableStick(g: Graphics, w: number, h: number): void {
-  g.roundRect(-w / 2, -h / 2, w, h, h / 2).fill(0xc99a6f).stroke(OUTLINE);
+  dropShadow(g, w, h);
+  g.roundRect(-w / 2, -h / 2, w, h, h / 2).fill(bevelVertical(0xc99a6f)).stroke(OUTLINE);
   const segs = Math.max(4, Math.floor(w / 10));
   for (let i = 0; i < segs; i++) {
     if (i % 2 === 0) continue;
@@ -131,16 +193,19 @@ function drawFlammableStick(g: Graphics, w: number, h: number): void {
 }
 
 function drawCandle(g: Graphics, w: number, h: number): void {
-  g.roundRect(-w / 2, -h / 2 + 4, w, h - 4, 2).fill(0xfdf3e0).stroke(OUTLINE);
-  g.poly([0, -h / 2 + 4, -w * 0.35, -h / 2 - 10, w * 0.35, -h / 2 - 10]).fill(color.electric).stroke(OUTLINE_THIN);
+  dropShadow(g, w, h);
+  g.roundRect(-w / 2, -h / 2 + 4, w, h - 4, 2).fill(bevelVertical(0xfdf3e0)).stroke(OUTLINE);
+  g.poly([0, -h / 2 + 4, -w * 0.35, -h / 2 - 10, w * 0.35, -h / 2 - 10]).fill(glossRadial(color.electric)).stroke(OUTLINE_THIN);
   g.poly([0, -h / 2, -w * 0.15, -h / 2 - 5, w * 0.15, -h / 2 - 5]).fill(color.danger);
 }
 
 function drawBarrel(g: Graphics, w: number, h: number): void {
-  g.roundRect(-w / 2, -h / 2, w, h, w * 0.2).fill(color.dangerDark).stroke(OUTLINE);
+  dropShadow(g, w, h);
+  g.roundRect(-w / 2, -h / 2, w, h, w * 0.2).fill(bevelVertical(color.dangerDark)).stroke(OUTLINE);
   for (const frac of [-0.28, 0.02, 0.32]) {
     g.rect(-w / 2, h * frac - 2.5, w, 5).fill(0xfdf3e0);
   }
+  g.rect(-w / 2, -h / 2, w, Math.max(1.5, h * 0.18)).fill({ color: 0xffffff, alpha: 0.22 });
 }
 
 const CATEGORY_FALLBACK: Record<PartDef['category'], number> = {
@@ -155,7 +220,7 @@ const CATEGORY_FALLBACK: Record<PartDef['category'], number> = {
   GOAL: color.success,
 };
 
-/** Draws a themed sprite sized from the part's own BodySpec — bold, flat, high-contrast shapes. */
+/** Draws a themed sprite sized from the part's own BodySpec — bold, flat, high-contrast shapes with soft gradient shading. */
 export function spriteForPart(def: PartDef): Graphics {
   const g = new Graphics();
   const shape = def.body.shape;
@@ -226,6 +291,7 @@ export function spriteForPart(def: PartDef): Graphics {
   }
 
   const base = CATEGORY_FALLBACK[def.category];
-  g.roundRect(-w / 2, -h / 2, w, h, 4).fill(base).stroke(OUTLINE);
+  dropShadow(g, w, h);
+  g.roundRect(-w / 2, -h / 2, w, h, 4).fill(bevelVertical(base)).stroke(OUTLINE);
   return g;
 }

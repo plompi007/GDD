@@ -6,6 +6,7 @@ import type { LevelDef } from '../core/level/LevelSchema.ts';
 import type { PartRegistry } from '../core/parts/PartRegistry.ts';
 import { SIM } from '../core/sim/constants.ts';
 import { spriteForPart } from '../render/PartSprite.ts';
+import { THEME } from '../render/theme.ts';
 import { ensureStylesInjected } from './styles.ts';
 
 const STATE_LABEL: Record<string, string> = {
@@ -27,6 +28,8 @@ export class GameScreen {
   readonly session: GameSession;
   private readonly app: Application;
   private readonly worldLayer: Container;
+  private readonly partsLayer: Container;
+  private readonly viewBounds: { minX: number; minY: number; maxX: number; maxY: number };
   private readonly overlay: HTMLDivElement;
   private readonly binEl: HTMLDivElement;
   private readonly playBtn: HTMLButtonElement;
@@ -51,8 +54,12 @@ export class GameScreen {
     this.session = new GameSession(level, registry);
     for (const entry of level.partsBin) this.remainingCounts.set(entry.partType, entry.count);
 
+    this.viewBounds = this.computeViewBounds();
     this.worldLayer = new Container();
     app.stage.addChild(this.worldLayer);
+    this.worldLayer.addChild(this.drawBackground());
+    this.partsLayer = new Container();
+    this.worldLayer.addChild(this.partsLayer);
     this.fitWorld();
 
     this.overlay = document.createElement('div');
@@ -126,10 +133,77 @@ export class GameScreen {
     this.onLeave?.();
   }
 
-  private fitWorld(): void {
+  /**
+   * Levels declare a generous `world` box mainly as an out-of-bounds fail
+   * plane (see LEFT_BOUNDS in WinConditions.ts) — it's typically much bigger
+   * than where the actual mechanism lives, which used to force the camera
+   * to fit that whole box and render every part tiny. Frame the camera on
+   * the placed parts instead (fixed + preplaced + every known solution, so
+   * the goal and the intended solve are always in view), padded generously
+   * for headroom during play. A "backstop" shape's own half-extent is
+   * clamped so an intentionally huge floor/wall doesn't blow the frame back
+   * out — only its center still anchors the box.
+   */
+  private computeViewBounds(): { minX: number; minY: number; maxX: number; maxY: number } {
     const level = this.session.level;
-    const scale = Math.min(this.app.screen.width / level.world.width, this.app.screen.height / level.world.height);
+    const MAX_HALF_EXTENT = 220;
+    const PADDING = 180;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    const allPlaced = [...level.fixedParts, ...level.preplacedParts, ...level.solutions.flatMap((s) => s.parts)];
+    for (const p of allPlaced) {
+      const shape = this.registry.get(p.partType).body.shape;
+      const rawHalfW = (shape.kind === 'ball' ? shape.radius : shape.w / 2) * SIM.PIXELS_PER_METER;
+      const rawHalfH = (shape.kind === 'ball' ? shape.radius : shape.h / 2) * SIM.PIXELS_PER_METER;
+      const halfW = Math.min(rawHalfW, MAX_HALF_EXTENT);
+      const halfH = Math.min(rawHalfH, MAX_HALF_EXTENT);
+      minX = Math.min(minX, p.x - halfW);
+      maxX = Math.max(maxX, p.x + halfW);
+      minY = Math.min(minY, p.y - halfH);
+      maxY = Math.max(maxY, p.y + halfH);
+    }
+    if (!Number.isFinite(minX)) return { minX: 0, minY: 0, maxX: level.world.width, maxY: level.world.height };
+    return {
+      minX: Math.max(0, minX - PADDING),
+      minY: Math.max(0, minY - PADDING),
+      maxX: Math.min(level.world.width, maxX + PADDING),
+      maxY: Math.min(level.world.height, maxY + PADDING),
+    };
+  }
+
+  private fitWorld(): void {
+    const b = this.viewBounds;
+    const w = Math.max(1, b.maxX - b.minX);
+    const h = Math.max(1, b.maxY - b.minY);
+    const scale = Math.min(this.app.screen.width / w, this.app.screen.height / h);
     this.worldLayer.scale.set(scale);
+    const cx = (b.minX + b.maxX) / 2;
+    const cy = (b.minY + b.maxY) / 2;
+    this.worldLayer.position.set(this.app.screen.width / 2 - cx * scale, this.app.screen.height / 2 - cy * scale);
+  }
+
+  /** Converts a world-space (pixel) point to the current on-canvas screen position — used for input and by tests. */
+  worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
+    return { x: this.worldLayer.position.x + worldX * this.worldLayer.scale.x, y: this.worldLayer.position.y + worldY * this.worldLayer.scale.y };
+  }
+
+  /** A subtle blueprint-style grid so empty playfield space reads as a designed board, not a blank void. */
+  private drawBackground(): Graphics {
+    const { width, height } = this.session.level.world;
+    const g = new Graphics();
+    g.rect(0, 0, width, height).fill(THEME.color.playfield);
+    const step = 64;
+    for (let x = step; x < width; x += step) {
+      const major = x % (step * 4) === 0;
+      g.moveTo(x, 0).lineTo(x, height).stroke({ width: major ? 1.5 : 1, color: 0xffffff, alpha: major ? 0.55 : 0.3 });
+    }
+    for (let y = step; y < height; y += step) {
+      const major = y % (step * 4) === 0;
+      g.moveTo(0, y).lineTo(width, y).stroke({ width: major ? 1.5 : 1, color: 0xffffff, alpha: major ? 0.55 : 0.3 });
+    }
+    return g;
   }
 
   private renderBin(): void {
@@ -194,8 +268,8 @@ export class GameScreen {
     if (!withinCanvas) return;
 
     const scale = this.worldLayer.scale.x;
-    const worldX = (clientX - canvasRect.left) / scale;
-    const worldY = (clientY - canvasRect.top) / scale;
+    const worldX = (clientX - canvasRect.left - this.worldLayer.position.x) / scale;
+    const worldY = (clientY - canvasRect.top - this.worldLayer.position.y) / scale;
     const snapped = { x: Math.round(worldX / SIM.GRID) * SIM.GRID, y: Math.round(worldY / SIM.GRID) * SIM.GRID };
 
     const id = `player_${this.nextPlacedId++}`;
@@ -232,7 +306,7 @@ export class GameScreen {
   private renderEditState(): void {
     for (const sprite of this.editSprites.values()) sprite.destroy();
     this.editSprites.clear();
-    this.worldLayer.removeChildren();
+    this.partsLayer.removeChildren();
 
     for (const part of this.session.editorState.parts) {
       const def = this.registry.get(part.partType);
@@ -244,19 +318,19 @@ export class GameScreen {
         sprite.cursor = 'pointer';
         sprite.on('pointertap', () => this.removePlacedPart(part.id));
       }
-      this.worldLayer.addChild(sprite);
+      this.partsLayer.addChild(sprite);
       this.editSprites.set(part.id, sprite);
     }
   }
 
   private renderRuntimeState(): void {
-    this.worldLayer.removeChildren();
+    this.partsLayer.removeChildren();
     this.editSprites.clear();
     this.runtimeSprites = [];
     if (!this.session.runtime) return;
     for (const part of this.session.runtime.all()) {
       const sprite = spriteForPart(part.def);
-      this.worldLayer.addChild(sprite);
+      this.partsLayer.addChild(sprite);
       this.runtimeSprites.push({ id: part.id, sprite, body: part.rigidBody });
     }
     this.syncRuntimeSprites();
