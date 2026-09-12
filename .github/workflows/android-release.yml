@@ -1,0 +1,66 @@
+name: Android release (internal track)
+
+# Manual trigger only — this needs secrets configured first (GDD §7.2/§7.3):
+#   ANDROID_KEYSTORE_BASE64        base64 of the release .jks keystore
+#   ANDROID_KEYSTORE_PASSWORD      keystore password
+#   ANDROID_KEY_ALIAS              key alias inside the keystore
+#   ANDROID_KEY_PASSWORD           key password (often same as store password)
+#   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON  a Play Console service-account JSON key
+#                                     with Release Manager access to this app
+#
+# Losing the keystore means you can never update the app again under the
+# same applicationId — generate it once and back it up somewhere durable
+# (a password manager or secrets vault), never only in this repo's secrets.
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build web app
+        run: pnpm run build
+
+      - name: Sync Capacitor Android project
+        run: pnpm exec cap sync android
+
+      - name: Decode signing keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+
+      - name: Build signed release bundle
+        working-directory: android
+        run: |
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file="$PWD/release.keystore" \
+            -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
+
+      - name: Remove keystore from disk
+        if: always()
+        run: rm -f android/release.keystore
+
+      - uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.chainworks.game
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: internal

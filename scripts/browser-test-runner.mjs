@@ -1,10 +1,8 @@
 // Runs tests/browser/*.ts scenarios inside a real Chromium instance against
 // a live Vite dev server. These exercise the actual Rapier WASM build, which
 // Vitest's Node environment cannot host reliably (see tests/browser/registry.ts).
-import { chromium } from 'playwright';
 import { createServer } from 'vite';
-
-const PLAYWRIGHT_EXECUTABLE = process.env.PLAYWRIGHT_EXECUTABLE_PATH || '/opt/pw-browsers/chromium';
+import { launchChromium } from './lib/launch-chromium.mjs';
 
 async function main() {
   const server = await createServer({ server: { port: 0 } });
@@ -13,7 +11,7 @@ async function main() {
   const port = typeof address === 'object' && address ? address.port : null;
   if (!port) throw new Error('Vite dev server did not report a port');
 
-  const browser = await chromium.launch({ executablePath: PLAYWRIGHT_EXECUTABLE });
+  const browser = await launchChromium();
   try {
     const page = await browser.newPage();
     const consoleErrors = [];

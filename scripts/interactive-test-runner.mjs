@@ -3,10 +3,8 @@
 // would, using Playwright mouse events (identical code path to touch via
 // pointer events). Verifies GDD's M5/M6 acceptance bar: "אפשר לבנות פתרון
 // שלם באצבע אחת בטלפון" — a full solution buildable with one finger.
-import { chromium } from 'playwright';
 import { createServer } from 'vite';
-
-const PLAYWRIGHT_EXECUTABLE = process.env.PLAYWRIGHT_EXECUTABLE_PATH || '/opt/pw-browsers/chromium';
+import { launchChromium } from './lib/launch-chromium.mjs';
 
 async function main() {
   const server = await createServer({ server: { port: 0 } });
@@ -15,7 +13,7 @@ async function main() {
   const port = typeof address === 'object' && address ? address.port : null;
   if (!port) throw new Error('Vite dev server did not report a port');
 
-  const browser = await chromium.launch({ executablePath: PLAYWRIGHT_EXECUTABLE });
+  const browser = await launchChromium();
   let failed = false;
   try {
     const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
