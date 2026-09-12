@@ -23,7 +23,7 @@ const zAnchorRef = z.object({
 
 const zConnection = z.object({
   id: z.string(),
-  kind: z.enum(['ROPE', 'BELT', 'WIRE']),
+  kind: z.enum(['ROPE', 'BELT', 'WIRE', 'PIVOT']),
   from: zAnchorRef,
   to: zAnchorRef,
   maxLength: z.number().optional(),

@@ -5,7 +5,7 @@ import { loadAllLevels, loadLevelById } from '../src/core/level/LevelCatalog.ts'
 describe('level schema + catalog', () => {
   it('loads and validates every levels/**/*.json file', () => {
     const levels = loadAllLevels();
-    expect(levels.length).toBeGreaterThanOrEqual(1);
+    expect(levels.length).toBeGreaterThanOrEqual(6);
   });
 
   it('has no duplicate level ids', () => {

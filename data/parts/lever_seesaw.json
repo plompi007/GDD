@@ -1,0 +1,28 @@
+{
+  "partType": "lever_seesaw",
+  "displayKey": "part.lever_seesaw",
+  "category": "MECHANISM",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "box", "w": 3, "h": 0.3 },
+    "mass": 2,
+    "friction": 0.4,
+    "restitution": 0.1
+  },
+  "tags": [],
+  "ports": [],
+  "anchors": [
+    { "idx": 0, "kind": "TENSION", "offset": { "x": -1.5, "y": 0 } },
+    { "idx": 1, "kind": "TENSION", "offset": { "x": 1.5, "y": 0 } },
+    { "idx": 2, "kind": "GENERIC", "offset": { "x": 0, "y": 0 } }
+  ],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 15,
+    "flippable": false,
+    "sprite": "parts/lever_seesaw.png",
+    "binIcon": "icons/lever_seesaw.svg"
+  },
+  "params": {}
+}

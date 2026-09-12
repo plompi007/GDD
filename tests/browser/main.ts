@@ -1,4 +1,5 @@
 import './tests/determinism.ts';
+import './tests/pivot-joint.ts';
 import './tests/level-a01.ts';
 import './tests/level-a02-bridge.ts';
 import './tests/level-a03-pulley.ts';

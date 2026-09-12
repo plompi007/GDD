@@ -5,7 +5,7 @@ describe('PartRegistry', () => {
   it('loads and validates every data/parts/*.json file', () => {
     const registry = loadPartRegistry();
     const all = registry.all();
-    expect(all.length).toBeGreaterThanOrEqual(25);
+    expect(all.length).toBeGreaterThanOrEqual(26);
   });
 
   it('has no duplicate partType across files', () => {
@@ -46,6 +46,7 @@ describe('PartRegistry', () => {
       ['gear_small', 'P0'],
       ['gear_large', 'P0'],
       ['pulley_wheel', 'P0'],
+      ['lever_seesaw', 'P0'],
       ['conveyor', 'P1'],
     ] as const) {
       expect(registry.has(partType), `missing part: ${partType}`).toBe(true);

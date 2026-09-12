@@ -1,4 +1,4 @@
-import type * as RAPIER from '@dimforge/rapier2d-deterministic';
+import * as RAPIER from '@dimforge/rapier2d-deterministic';
 import { buildBody } from '../sim/BodyFactory.ts';
 import { SIM } from '../sim/constants.ts';
 import { sortedById } from '../sim/Determinism.ts';
@@ -45,5 +45,21 @@ export function buildSimFromEditorState(
     const tags = [...new Set([...def.tags, ...part.tags])];
     runtime.register({ id: part.id, def, rigidBody, collider, tags, params, state: {} });
   }
+
+  // PIVOT connections need both bodies to already exist, so they're wired up
+  // in a second pass. Anchors are each part's own authored local-space anchor
+  // point (GDD PartDef.anchors) — a lever_seesaw pinned this way tips freely
+  // around its fulcrum without needing scripted rotation.
+  for (const conn of editorState.connections) {
+    if (conn.kind !== 'PIVOT') continue;
+    const fromPart = runtime.get(conn.from.partId);
+    const toPart = runtime.get(conn.to.partId);
+    const fromAnchor = fromPart?.def.anchors[conn.from.anchorIdx];
+    const toAnchor = toPart?.def.anchors[conn.to.anchorIdx];
+    if (!fromPart || !toPart || !fromAnchor || !toAnchor) continue;
+    const jointData = RAPIER.JointData.revolute(fromAnchor.offset, toAnchor.offset);
+    world.createImpulseJoint(jointData, fromPart.rigidBody, toPart.rigidBody, true);
+  }
+
   return runtime;
 }
