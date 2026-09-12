@@ -1,0 +1,12 @@
+export const SIM = {
+  PIXELS_PER_METER: 32,
+  GRAVITY: { x: 0, y: 9.81 },
+  FIXED_DT: 1 / 120,
+  MAX_SUBSTEPS_PER_FRAME: 4,
+  SOLVER_ITERATIONS: 8,
+  MAX_SIM_SECONDS: 90,
+  WORLD_WIDTH: 1600,
+  WORLD_HEIGHT: 1200,
+  GRID: 16,
+  SLEEP_ENABLED: false,
+} as const;

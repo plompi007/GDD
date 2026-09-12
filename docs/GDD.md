@@ -1,0 +1,1291 @@
+# GDD — "CHAINWORKS" (שם עבודה)
+
+מסמך מפרט פיתוח מלא — משחק פאזל פיזיקלי מבוסס תגובת שרשרת
+
+**גרסה:** 1.0 | **תאריך:** ספטמבר 2026
+**קהל היעד של המסמך:** סוכן קוד (Claude Code) + המפתח
+**פלטפורמות יעד:** iOS 15+, Android 9+ (וכבונוס: Web/PWA מאותו קוד)
+
+> **הערה משפטית מקדימה:** המסמך הזה מנתח מכניקות משחק (שאינן מוגנות בזכויות יוצרים) ומגדיר יצירה מקורית חדשה. אין להשתמש בשם, בגרפיקה, בצלילים, בשמות הדמויות או בפריסות השלבים של אף משחק קיים. ראה סעיף 4.
+
+---
+
+## 0. TL;DR — ההחלטות הטכניות המרכזיות
+
+| החלטה | הבחירה | למה |
+|---|---|---|
+| סטאק | TypeScript + Rapier2D (`@dimforge/rapier2d-deterministic`) + PixiJS v8 + React (UI shell) + Capacitor 6 (לאריזה ל-Android/iOS) | דטרמיניזם מובטח, חזק מאוד ב-TS, ואפשר לבדוק כל איטרציה בדפדפן בנייד תוך שניות לפני שמרכיבים build |
+| מנוע פיזיקה | Rapier2D (WASM) | היחיד עם determinism מובטח cross-platform + snapshot/restore מובנה. קריטי לפאזל שבו פתרון חייב להיות ניתן לשחזור |
+| ארכיטקטורת ליבה | סימולציה דו-שכבתית: שכבת גופים קשיחים (Rapier) + שכבת גרף אנרגיה לוגי מעליה | זה הסוד של הז'אנר. חבלים, גלגלי שיניים, חשמל וחום אינם פיזיקה קשיחה — הם רשת סיגנלים. ניסיון לסמלץ חבל כשרשרת גופים = חוסר יציבות ובאגים אינסופיים |
+| Timestep | 1/120s קבוע, accumulator, מקסימום 4 צעדים לפריים | דטרמיניזם + יציבות מפרקים |
+| נתוני שלבים | JSON חיצוני + JSON Schema וולידציית Zod | שלבים ניתנים לעריכה בלי לגעת בקוד; Claude Code יכול לייצר שלבים כ-data-JSON |
+
+חלופה אם רוצים נייטיב מלא מהיום הראשון: **Flutter + Flame + forge2d**, תוצאה מצוינת, אבל מאבדים את לולאת הבדיקה המהירה בדפדפן ואת הדטרמיניזם המובטח חוצה-פלטפורמות.
+
+---
+
+## 1. ניתוח רכיבים ומכניקות (Core Gameplay Mechanics)
+
+### 1.1 ניתוח הז'אנר — מה באמת גורם לו לעבוד
+
+לפני רשימת הרכיבים, חמישה עקרונות שהם הליבה האמיתית של הז'אנר. כל החלטת עיצוב במסמך נגזרת מהם:
+
+1. **דטרמיניזם מוחלט.** אותה הצבה = אותה תוצאה, תמיד. בלי זה הפאזל נהפך להימור, והשחקן מאבד אמון.
+2. **צפיפות סיבתית.** כל רכיב חייב להשפיע על לפחות 3 רכיבים אחרים בדרכים שונות. רכיב שעושה דבר אחד = רכיב משעמם.
+3. **מחסור מכוון.** ארגז החלקים מוגבל. הכיף הוא לא "מה לשים" אלא "איך לעשות עם מה שיש".
+4. **פתרונות מרובים.** תנאי הניצחון בודק תוצאה, לא שיטה. אף פעם אל תבדוק "האם השחקן שם גלגלת במיקום X".
+5. **טיימינג כמימד שלישי.** שני פתרונות זהים מרחבית יכולים להיכשל/להצליח לפי סדר האירועים. זה מה שנותן עומק אחרי 50 שלבים.
+
+### 1.2 טקסונומיית אנרגיה — הבסיס לכל המערכת
+
+כל רכיב מוגדר כ-צומת בגרף עם פורטים (in/out) מטיפוסים הבאים. זו האבסטרקציה שהקוד כולו נבנה סביבה:
+
+```ts
+export enum EnergyType {
+  ROTARY     = 'ROTARY',     // סיבובי (מומנט rad/s + direction)
+  TENSION    = 'TENSION',    // משיכה ליניארית (חבל) — עוצמה + כיוון
+  ELECTRIC   = 'ELECTRIC',   // בוליאני on/off (+ לעומס זרם)
+  THERMAL    = 'THERMAL',    // חום/להבה — יש מיקום ורדיוס
+  PNEUMATIC  = 'PNEUMATIC',  // זרם אוויר — וקטור + עוצמה + טווח
+  LIGHT      = 'LIGHT',      // חרוט/קרן — ray-cast
+  IMPACT     = 'IMPACT',     // אירוע מגע חד-פעמי (טריגר)
+}
+```
+
+**כלל ברזל לסוכן הקוד:** רכיב לא "יודע" על רכיב אחר. הוא רק פולט/צורך טיפוס אנרגיה. כל אינטראקציה חדשה = צירוף חדש של פורטים, בלי `if (partA === 'candle' && partB === 'fuse')`.
+
+### 1.3 קטלוג הרכיבים המלא
+
+עמודות: `Tier` = P0 (MVP), P1, P2. `mass` בק"ג, `rest` = restitution, `fric` = friction, `gScale` = gravityScale.
+
+#### א. מבנה וסטטיקה (STATIC — לא מושפעים מכבידה)
+
+| ID | שם תצוגה | תכונות | פורטים | Tier |
+|---|---|---|---|---|
+| `plank_wood` | קרש עץ | static, סיבוב חופשי, fric 0.55, rest 0.20 | — | P0 |
+| `beam_steel` | קורת פלדה | static, fric 0.25, rest 0.35, tag: METALLIC | — | P0 |
+| `wall_brick` | קיר לבנים | static, fric 0.70, rest 0.05, tag: DESTRUCTIBLE | — | P0 |
+| `ramp_arc` | מסלול מעוגל | static, fric 0.15 | — | P1 |
+| `pipe_straight` / `pipe_elbow` | צינור / ברך | static, סנסור פנימי שמכוון גוף לאורך ה-spline, מנטרל כבידה בפנים | — | P1 |
+| `spike_pin` | יתד | static זעיר, tag: SHARP (מפוצץ בלונים P0) | — | P0 |
+| `floor_ground` | רצפה | static, גבול העולם | — | P0 |
+
+#### ב. גופים ניידים (DYNAMIC)
+
+| ID | שם תצוגה | mass | rest | fric | gScale | tags |
+|---|---|---|---|---|---|---|
+| `ball_lead` | כדור עופרת | 8.0 | 0.05 | 0.45 | 1.0 | HEAVY,METALLIC |
+| `ball_iron` | כדור ברזל | 5.0 | 0.15 | 0.35 | 1.0 | METALLIC |
+| `ball_wood` | כדור עץ | 1.2 | 0.40 | 0.50 | 1.0 | FLAMMABLE |
+| `ball_rubber` | כדור גומי | 0.6 | 0.85 | 0.80 | 1.0 | BOUNCY |
+| `ball_glass` | גולת זכוכית | 0.30 | 0.60 | 0.05 | 1.0 | FRAGILE |
+| `crate_wood` | ארגז | 3.0 | 0.10 | 0.65 | 1.0 | FLAMMABLE,DESTRUCTIBLE |
+| `balloon_lift` | בלון | 0.15 | 0.50 | 0.10 | −0.35 | FLAMMABLE,POPPABLE,WIND |
+| `drifter_orb` | כדור אתר | 1.0 | 0.90 | 0.02 | 0.0 | linearDamping 0.15 |
+
+**הערה לסוכן הקוד:** `gScale` שלילי לבלון מיושם כ-`rigidBody.setGravityScale(-0.35)`, לא כוח מותאם. מכפיל רגישות לרוח = WIND×3.0. לשדות אוויר, מאוחסן ב-metadata של הרכיב ומופעל ע"י `FieldSystem`.
+
+#### ג. העברת כוח (שכבת הגרף — Mechanism)
+
+| ID | שם תצוגה | תיאור מכני | פורטים | Tier |
+|---|---|---|---|---|
+| `rope` | חבל | קו בין 2 עוגנים. לא גוף פיזיקלי. מעביר TENSION. אורך מקסימלי. נחתך ע"י SHARP או THERMAL | 2× TENSION (דו-כיווני) | P0 |
+| `pulley_wheel` | גלגלת | מפנה כיוון של חבל, משנה יחס כוח 1:1. ניתן להצמדה לקיר או לגוף | 2× TENSION | P0 |
+| `gear_small` / `gear_large` | גלגל שיניים | שני גלגלים סמוכים (מרחק > r₁+r₂+ε) → צימוד עם היפוך כיוון ויחס r₁/r₂ | ROTARY in/out | P0 |
+| `drive_belt` | רצועת הנעה | מחבר שני צמתי ROTARY מרוחקים, ללא היפוך כיוון. אורך מקסימלי 400 יח' | 2× ROTARY | P0 |
+| `lever_seesaw` | נדנדה / מנוף | RevoluteJoint סביב ציר. עוגני חבל בשני הקצוות. ממיר תנועה↔TENSION וסיבוב↔תנועה | 2× TENSION anchors | P0 |
+| `conveyor` | מסוע | ROTARY in → surfaceVelocity על הקוליידר. גופים מעל נעים לכיוון א', גופים מתחת לכיוון ב' | ROTARY in | P1 |
+| `winch_drum` | תוף כננת | ROTARY in → TENSION out (מגלגל חבל) | ROTARY in, TENSION out | P1 |
+| `axle_platform` | פלטפורמה על ציר | גוף דינמי מעוגן בציר, נוטה לפי משקל | — | P1 |
+
+#### ד. מקורות אנרגיה
+
+| ID | שם תצוגה | תיאור | פורטים | Tier |
+|---|---|---|---|---|
+| `outlet_power` | שקע חשמל | מקור ELECTRIC קבוע. פרמטר `startsOn: bool` | ELECTRIC out ×N | P0 |
+| `motor_electric` | מנוע | ELECTRIC in → ROTARY out. פרמטרים: `rpm` (1–600), `direction` | ELECTRIC in, ROTARY out | P0 |
+| `switch_plate` | לוח לחיצה | IMPACT in → toggle/pulse של ELECTRIC out. פרמטר `mode: 'toggle'|'momentary'` | IMPACT in, ELECTRIC out | P0 |
+| `flywheel_spring` | גלגל תנופה קפיצי | נדרך ידנית בעורך (`charge`: 1–5), משחרר ROTARY לזמן קצוב בהפעלת IMPACT | IMPACT in, ROTARY out | P1 |
+| `wind_vane` | כנף רוח | PNEUMATIC in → ROTARY out | PNEUMATIC in, ROTARY out | P1 |
+| `turbine_steam` | טורבינת קיטור | PNEUMATIC in (קיטור חזק בלבד) → ROTARY out | PNEUMATIC in, ROTARY out | P2 |
+| `cell_solar` | תא סולארי | LIGHT in → ELECTRIC out | LIGHT in, ELECTRIC out | P1 |
+
+#### ה. פנאומטיקה ואוויר
+
+| ID | שם תצוגה | תיאור | פורטים | Tier |
+|---|---|---|---|---|
+| `fan_blower` | מאוורר | ELECTRIC in → שדה PNEUMATIC מלבני. פרמטרים: `power` 1–3, `range` | ELECTRIC in, PNEUMATIC out | P0 |
+| `bellows` | מפוח | IMPACT (לחיצה מלמעלה/מלמטה) → פולס אוויר חד-פעמי | IMPACT in, PNEUMATIC out | P0 |
+| `nozzle_vacuum` | פיית שאיבה | ELECTRIC in → שדה משיכה (PNEUMATIC שלילי) | ELECTRIC in, PNEUMATIC out | P1 |
+| `kettle_steam` | קומקום | THERMAL in → סילון קיטור עוצמתי, PNEUMATIC (מכוון, טווח קצר) | THERMAL in, PNEUMATIC out | P1 |
+
+#### ו. חום ופירוטכניקה
+
+| ID | שם תצוגה | תיאור | פורטים | Tier |
+|---|---|---|---|---|
+| `candle` | נר | פולט THERMAL ברדיוס 20 יח'. נכבה מ-PNEUMATIC חזק. `startsLit: bool` | THERMAL out | P0 |
+| `burner_torch` | מבער | ELECTRIC in → THERMAL out (להבה מכוונת, טווח 60) | ELECTRIC in, THERMAL out | P1 |
+| `fuse_cord` | פתיל | THERMAL in בקצה א' → התקדמות בעירה 45 יח'/שנייה → THERMAL out בקצה ב'. אלמנט הטיימינג המרכזי במשחק | THERMAL in, THERMAL out | P0 |
+| `charge_barrel` | מטען נפץ | THERMAL in → אימפולס רדיאלי (עוצמה `power`, רדיוס `radius`) + הריסת DESTRUCTIBLE בטווח | THERMAL in, IMPACT out | P0 |
+| `lens_magnifier` | עדשה מגדלת | LIGHT in → THERMAL out בנקודת המוקד | LIGHT in, THERMAL out | P2 |
+
+#### ז. אור
+
+| ID | שם תצוגה | תיאור | פורטים | Tier |
+|---|---|---|---|---|
+| `lamp_bulb` | נורה | ELECTRIC in → חרוט LIGHT | ELECTRIC in, LIGHT out | P1 |
+| `emitter_beam` | פנס קרן | ELECTRIC in → קרן LIGHT ישרה (ray-cast) | ELECTRIC in, LIGHT out | P1 |
+| `mirror_panel` | מראה | מחזירה קרן LIGHT בזווית. סיבוב בקפיצות 15° | LIGHT passthrough | P2 |
+| `sensor_photo` | חיישן אור | LIGHT in → ELECTRIC out | LIGHT in, ELECTRIC out | P1 |
+
+#### ח. מפעילים קינטיים
+
+| ID | שם תצוגה | תיאור | פורטים | Tier |
+|---|---|---|---|---|
+| `punch_arm` | זרוע הלימה | IMPACT על הכפתור בגב → אימפולס קדימה (עוצמה קבועה 22 N·s) | IMPACT in/out | P0 |
+| `springboard` | קרש קפיצה | משטח עם restitution אפקטיבי 1.35 (שומר מומנטום אופקי) | — | P0 |
+| `bumper_post` | פגוש | אימפולס רדיאלי בכל מגע. cooldown 100ms | IMPACT in/out | P1 |
+| `tube_launcher` | צינור שיגור | מכיל גוף אחד. IMPACT/ELECTRIC → משגר בזווית ובעוצמה (`angle`, `power`) | in: IMPACT\|ELECTRIC | P1 |
+| `spring_crate` | ארגז קפיצי | ROTARY in — אחרי N סיבובים הבמה נפתחת ומשגרת אימפולס. מאפשר השהיה מדויקת | ROTARY in, IMPACT out | P1 |
+| `cutter_shears` | מספריים | IMPACT/ELECTRIC → חותך `rope` וגם POPPABLE בטווח | in: IMPACT\|ELECTRIC | P0 |
+| `trapdoor` | דלת מלכודת | ELECTRIC in → הקוליידר הופך ל-sensor (נפתח) | ELECTRIC in | P1 |
+| `magnet_electro` | אלקטרומגנט | ELECTRIC in → שדה משיכה על METALLIC בלבד | ELECTRIC in | P2 |
+| `pad_antigravity` | לוח אנטי-כבידה | אזור שהופך gravityScale של כל גוף בתוכו | — | P2 |
+
+#### ט. דמויות, יעדים ומיוחדים
+
+| ID | שם תצוגה | תיאור | Tier |
+|---|---|---|---|
+| `walker_unit` | יחידת הליכה ("ווקר") | בוט קטן שצועד בכיוון קבוע, מסתובב כשנתקל במכשול, נופל עם כבידה. מוגן: אם `speed` > 14 בפגיעה → `FAILED`. חילוף ל-Mel | P1 |
+| `walker_beacon` | משואת משיכה | אם ה-ווקר "רואה" אותה בקו ראייה אופקי פנוי — הוא צועד לעברה. חילוף ללוגיקת גבינה/חתול-עכבר | P1 |
+| `bin_target` | דלי יעד | Sensor. נחשב "הכיל" אחרי שהגוף בתוכו ומהירותו < 0.5 למשך 500ms | P0 |
+| `zone_goal` | אזור יעד | Sensor בלתי נראה לתנאי ניצחון גנריים | P0 |
+| `walker_shelter` | מחסה | ה-ווקר נכנס ונעלם → תנאי ניצחון | P1 |
+
+**סה"כ: ~52 רכיבים. P0 בלבד = 24 רכיבים ומספיקים בהחלט ל-40 שלבים איכותיים.**
+
+### 1.4 מטריצת אינטראקציות (Interaction Matrix)
+
+הכלל: מקור → יעד ⇒ תוצאה. זו הטבלה שהסוכן צריך לממש ב-`InteractionRules.ts`.
+
+#### 1.4.1 אינטראקציות לפי טיפוס אנרגיה
+
+| מקור ↓ / יעד → | TENSION | ROTARY | ELECTRIC | THERMAL |
+|---|---|---|---|---|
+| **TENSION** | מועבר דרך pulley (1:1, שינוי כיוון) | `winch_drum`: הפוך משיכה → סיבוב | — | — |
+| **ROTARY** | `winch_drum`: סיבוב → משיכה | היפוך + יחס רדיוסים: `gear`. ללא היפוך: `belt` | `generator` (P2) — | — |
+| **ELECTRIC** | — | `motor` → ROTARY | חיווט מקבילי דרך `outlet` | `burner_torch` להבה → THERMAL |
+| **THERMAL** | `rope` שורף → ניתוק | — | — | `fuse_cord` → התקדמות 45 יח'/s |
+| **PNEUMATIC** | — | `vane_wind` → ROTARY | — | מכבה `candle` (power ≥ 2) |
+| **LIGHT** | — | — | `sensor_photo`, `cell_solar` | `lens_magnifier` מוקד → |
+| **IMPACT** | — | `flywheel_spring` | `switch_plate` | — |
+
+#### 1.4.2 אינטראקציות לפי תגית (Tag Rules)
+
+| תנאי | תוצאה |
+|---|---|
+| SHARP נוגע ב-POPPABLE | הבלון מתפוצץ → נפלט פולס קטן PNEUMATIC רדיאלי |
+| FLAMMABLE בטווח THERMAL | הגוף נשרף ונעלם אחרי 800ms (בלון, חבל, גוף על ארגז) |
+| POPPABLE בטווח THERMAL | פיצוץ מיידי |
+| DESTRUCTIBLE בטווח `barrel_charge` | הקוליידר מוסר מהעולם |
+| METALLIC בטווח + `magnet_electro` פעיל | כוח F = k·m / d², clamp ל- d_min = 20 |
+| FRAGILE בפגיעה ב-speed > 18 | הגוף מתנפץ ונעלם |
+| `walker_unit` פוגע ב-speed > 14 | `FAILED` מיידי |
+| מכיל גוף `antigravity_pad` | gravityScale *= −1 בכניסה, חזרה ביציאה |
+
+### 1.4.3 שאלות ספציפיות שביקשת — התשובות המימושיות
+
+**מה קורה כשחבל מתחבר לגלגלת?**
+
+גלגלת היא נקודת ניתוב (`RopeNetwork`). החבל אינו גוף פיזיקלי. הוא קטע ברשת מתיחה. אלגוריתם בכל `tick`:
+
+1. עבור כל רשת חבל: חשב `totalLength` = Σ |segment_i|
+2. אם `totalLength > maxLength`: הרשת מתוחה (taut)
+3. אם מתוחה: חשב את התזוזה הנדרשת `delta = totalLength - maxLength`
+4. פזר את `delta` בין שני העוגנים ביחס הפוך למסה האפקטיבית שלהם
+5. הפעל אימפולס על כל עוגן בכיוון המקטע הצמוד אליו (לא הישר בין הקצוות!)
+6. אם עוגן הוא `static` → כל התזוזה נופלת על העוגן השני
+
+זה נותן את ההתנהגות "חבל שמושך" בלי חוסר-היציבות של שרשרת מפרקים.
+
+**מה קורה כשלהבה נוגעת בפתיל?**
+
+`ThermalSystem` מבצע בכל `tick` שאילתת טווח (`world.intersectionsWithShape`) סביב כל פולט THERMAL. פתיל שנכנס לטווח משנה `state: 'IDLE' → 'BURNING'` ומתחיל `burnProgress += 45 * dt`. בכל פריים נקודת הבעירה עצמה נהפכת לפולט THERMAL זמני ברדיוס 8 — כך שפתיל יכול להצית פתיל אחר, בלון או ארגז שנמצאים לאורכו. כשה-`burnProgress ≥ length` נפלט THERMAL בקצה השני והפתיל נעלם.
+
+**מה קורה כשהדף אוויר מזיז מניפה?**
+
+`FieldSystem` מחזיק רשימת שדות AABB פעילים. כל `tick`:
+
+```
+for field in activeFields:
+  bodies = world.intersectionsWithAABB(field.aabb)
+  for body in bodies:
+    f = field.direction * field.power * body.windFactor * falloff(dist)
+    body.applyForce(f)
+    if body.partType has PNEUMATIC-in port:
+      graph.emit(body.nodeId, PNEUMATIC, f.magnitude)
+```
+
+כלומר: אותו שדה גם דוחף גופים פיזית וגם מזין את הפורט הלוגי של הכנף. `wind_vane` ממיר את זה ל-`angularVelocity = clamp(power * 0.8, 0, 12) rad/s` ומזרים החוצה ROTARY לגרף.
+
+---
+
+## 2. מנוע המשחק והפיזיקה (Physics & Logic Blueprint)
+
+### 2.1 בחירת מנוע — נימוק
+
+| מנוע | דטרמיניזם חוצה-פלטפורמות | יציבות מפרקים | ביצועים | הכרעה |
+|---|---|---|---|---|
+| **Rapier2D** | ✅ מובטח (build deterministic) + snapshot/MD5 | טובה מאוד | הכי מהיר | ✅ **נבחר** |
+| Box2D / Planck.js | ⚠️ קבוע, לא timestep מובטח בין מכשירים | הטובה ביותר | טובה | חלופה |
+| Matter.js | ❌ | בינונית | בינונית | לא מתאים |
+
+**הנימוק המכריע:** `world.createSnapshot()` מחזיר מערך בייטים זהה במכשירים שונים אחרי אותו מספר צעדים. זה מאפשר golden replay tests — לשמור פתרון כ-JSON, להריץ אותו ב-CI, ולוודא שהשלב עדיין פתיר אחרי כל שינוי קוד. בלי זה, כל tweak לפיזיקה שובר שלבים בשקט.
+
+**חבילה:** `@dimforge/rapier2d-deterministic` (לא ה-build הרגיל, לא ה-SIMD).
+
+### 2.2 קנה מידה ופרמטרים גלובליים
+
+```ts
+export const SIM = {
+  PIXELS_PER_METER: 32,        // Rapier עובד במטרים. לעולם אל תשלח פיקסלים.
+  GRAVITY: { x: 0, y: 9.81 },  // +y = משחק בקואורדינטות מטה
+  FIXED_DT: 1 / 120,
+  MAX_SUBSTEPS_PER_FRAME: 4,
+  SOLVER_ITERATIONS: 8,
+  MAX_SIM_SECONDS: 90,          // מעבר לזה → TIMEOUT
+  WORLD_WIDTH: 1600,            // יחידות עולם (= 50m)
+  WORLD_HEIGHT: 1200,           // (= 37.5m)
+  GRID: 16,                     // snap-to-grid
+  SLEEP_ENABLED: false,         // שובר דטרמיניזם בשרשראות ארוכות! חובה
+};
+```
+
+### 2.3 מכונת המצבים של המשחק
+
+```
+                                              ┌──────────────────────────────────────────┐
+                                              │                                            │
+                                         ┌────▼────┐   play    ┌─────────┐   win    ┌─────┴────┐
+                                         │  EDIT   │──────────▶│ RUNNING │─────────▶│  SOLVED  │
+                                         └────▲────┘           └────┬────┘          └──────────┘
+                                              │                     │ lose/timeout
+                                              │ reset               ▼
+                                              │              ┌─────────┐
+                                              └──────────────│ FAILED  │
+                                              │              └─────────┘
+                                              │  resume     ┌─────────┐
+                                              └─────────────│ PAUSED  │◀── pause ──┐
+                                                             └─────────┘            │
+                                                                        (from RUNNING)
+```
+
+| מצב | פיזיקה | גרף | קלט מותר |
+|---|---|---|---|
+| EDIT | קפואה (בלי `step()`) | לא מוערך | הצבה, הזזה, סיבוב, מחיקה, חיבור, pan/zoom |
+| RUNNING | `step()` בקצב קבוע | מוערך כל tick | pause, reset, pan/zoom בלבד |
+| PAUSED | קפואה | קפוא | resume, reset, pan/zoom |
+| SOLVED | ממשיכה לרוץ 2s לצורך חגיגה | מוערך | next level, reset |
+| FAILED | קפואה | קפואה | reset |
+
+### 2.4 לולאת המשחק — מימוש מדויק
+
+```ts
+// core/sim/FixedStepLoop.ts
+class FixedStepLoop {
+  private accumulator = 0;
+  private simTime = 0;
+  private tickIndex = 0;
+
+  frame(realDtSeconds: number) {
+    if (this.state !== 'RUNNING' && this.state !== 'SOLVED') {
+      this.renderer.draw(1.0); // מציירים גם במצב קפוא
+      return;
+    }
+
+    // clamp כדי למנוע death of spiral אחרי מינימיזציה של האפליקציה
+    this.accumulator += Math.min(realDtSeconds, 0.1);
+
+    let steps = 0;
+    while (this.accumulator >= SIM.FIXED_DT && steps < SIM.MAX_SUBSTEPS_PER_FRAME) {
+      this.tick();
+      this.accumulator -= SIM.FIXED_DT;
+      steps++;
+    }
+    // אם נשארנו מאחור — זורקים את השארית. עדיף לדלג מאשר לשבור דטרמיניזם.
+    if (steps === SIM.MAX_SUBSTEPS_PER_FRAME) this.accumulator = 0;
+
+    this.renderer.draw(this.accumulator / SIM.FIXED_DT); // interpolation alpha
+  }
+
+  private tick() {
+    // ⚠️ הסדר הזה קריטי לדטרמיניזם. אל תשנה אותו.
+    this.energyGraph.propagate();     // 1. חשמל → אור/חום/סיבוב (טופולוגי)
+    this.thermalSystem.update();      // 2. התקדמות פתילים, הצתות
+    this.fieldSystem.applyForces();   // 3. רוח / ואקום / מגנט
+    this.ropeNetwork.solveTension();  // 4. אילוצי חבלים
+    this.gearTrain.applyTorques();    // 5. מומנטים למפרקים מנועיים
+    this.world.step(this.eventQueue); // 6. הצעד הפיזיקלי
+    this.collisionRouter.drain();     // 7. תרגום אירועי מגע ל-IMPACT
+    this.winConditions.evaluate();    // 8. בדיקת ניצחון/כישלון
+    this.simTime += SIM.FIXED_DT;
+    this.tickIndex++;
+    if (this.simTime > SIM.MAX_SIM_SECONDS) this.fail('TIMEOUT');
+  }
+}
+```
+
+### 2.5 מנגנון Reset — הכלל הכי חשוב במסמך
+
+לעולם אל תנסה "להחזיר" את הפיזיקה אחורה. Reset = בנייה מחדש של העולם מאפס.
+
+```ts
+reset() {
+  this.world.free();  // משחררים את עולם ה-WASM
+  this.world = new RAPIER.World(SIM.GRAVITY);
+  this.energyGraph.clear();
+  this.ropeNetwork.clear();
+  // editorState = המקור היחיד לאמת. הוא לא משתנה לעולם ב-RUNNING.
+  LevelLoader.build(this.world, this.level, this.editorState);
+  this.simTime = 0; this.tickIndex = 0; this.accumulator = 0;
+  this.state = 'EDIT';
+}
+```
+
+לשם כך חייבים **שני מבני נתונים נפרדים**:
+
+- `editorState` — האמת. מה השחקן הציב, איפה, באיזו זווית, ומה מחובר למה. קריא בלבד — ברגע שנכנסים ל-RUNNING.
+- `simState` — נגזרת. גופי Rapier, handles, מצבי גרף. נהרס ונבנה מחדש בכל reset.
+
+### 2.6 דטרמיניזם — צ'קליסט חובה לסוכן הקוד
+
+1. `sleepingEnabled = false`.
+2. סדר יצירה קבוע: מיין את `editorState.parts` לפי `id` (מחרוזת) לפני הבנייה. לעולם אל תסתמך על סדר `Map` / `Object.keys`.
+3. אפס שימוש ב-`Math.random()` בסימולציה. אם צריך רנדומליות ויזואלית — מחוץ ל-`tick`, בשכבת הרנדר בלבד.
+4. אפס תלות ב-`performance.now()` בתוך `tick()`. הזמן היחיד הוא `simTime`.
+5. אפס תלות ב-`dt` אמיתי בתוך הלוגיקה — רק `SIM.FIXED_DT`.
+6. איטרציות סולבר קבועות.
+7. בדיקה אוטומטית: אחרי 600 ticks, `world.createSnapshot()` (md5) חייב להיות זהה בין ריצות. הוסף את זה כטסט.
+
+### 2.7 תנאי ניצחון
+
+```ts
+type WinCondition =
+  | { type: 'CONTAINED'; subjectTag: string; containerId: string; holdMs: number }
+  | { type: 'REACHED_ZONE'; subjectTag: string; zoneId: string }
+  | { type: 'ENERGY_STATE'; nodeId: string; energy: EnergyType; active: boolean; forMs: number }
+  | { type: 'DESTROYED'; targetId: string }
+  | { type: 'ALL_OF'; conditions: WinCondition[] }
+  | { type: 'ANY_OF'; conditions: WinCondition[] };
+
+type FailCondition =
+  | { type: 'TIMEOUT' }
+  | { type: 'SUBJECT_DESTROYED'; subjectTag: string }
+  | { type: 'LEFT_BOUNDS'; subjectTag: string };
+```
+
+**כלל:** תנאי ניצחון בודק מצב עולם, לעולם לא הצבת רכיבים. זה מה שמאפשר פתרונות מרובים.
+
+---
+
+## 3. התאמה למובייל וממשק משתמש (Mobile UI/UX)
+
+### 3.1 פריסת מסך
+
+```
+┌─────────────────────────────────┐ ← safe-area-top
+│ ‹  שלב 12 ... 🎯 המטרה › ⓘ  🔄 │  HUD עליון — 56pt
+├─────────────────────────────────┤
+│                                  │
+│                                  │
+│         CANVAS (Pixi)           │  שאר הגובה
+│      pan / zoom / drop          │
+│                                  │
+│                                  │
+├─────────────────────────────────┤
+│ ⚙️ 🔥 🎈 🔵 ▸▸▸ (גלילה אופקית)  │  ארגז החלקים — 96pt
+├─────────────────────────────────┤
+│         [ ▶ הפעל ]              │  כפתור ראשי — 64pt
+└─────────────────────────────────┘ ← safe-area-bottom
+```
+
+**החלטות מפתח:**
+
+- הכפתור הראשי **תמיד באותו מקום** ומחליף תווית: הפעל → עצור → אפס. בלי כפתורים קופצים.
+- ארגז החלקים הוא drawer שניתן לגרור למעלה למצב מורחב (רשת 4 עמודות) — כי 50 רכיבים לא נכנסים לגלילה אופקית אחת.
+- **אזור בטוח לאגודל:** כל פעולה הרסנית (מחיקה, איפוס) לא בטווח 44pt מקצוות המסך התחתונים.
+- מינימום touch target: **44×44pt**.
+
+### 3.2 גרירה ושחרור (Drag & Drop)
+
+```
+STATE: IDLE → PICKING → DRAGGING → PLACING
+
+IDLE:
+  touchstart על פריט בארגז → טיימר 120ms → PICKING
+
+PICKING (120–180ms):
+  haptic: light impact
+  הפריט "מתרומם" (scale 1.15, shadow, opacity 0.9)
+  אם האצבע זזה >8px לפני ה-120ms ← זו גלילה של הארגז, לא הרמה. בטל.
+
+DRAGGING:
+  ⚠️ קריטי: הספרייט מוצג ב-(finger.y − 64px) כדי שהאגודל לא יסתיר אותו.
+  קו מקווקו מחבר את האצבע לספרייט.
+  הצללית (ghost) מוצגת במיקום ה-snap הסופי, לא במיקום האצבע.
+  ירוק = הצבה חוקית | אדום = חפיפה/מחוץ לגבולות
+  גרירה לקצה המסך (80px) → auto-pan של המצלמה
+
+PLACING:
+  touchend על מיקום חוקי → הצבה + haptic medium
+  touchend על מיקום לא חוקי → אנימציית חזרה לארגז (250ms ease-out)
+```
+
+**מחיקת חיבור:** tap על החבל עצמו → מודגש → ✕ צף → מוחק. Swipe מהיר על החבל = גם מוחק.
+
+### 3.3 Snap-to-Grid ומגנטיות
+
+היררכיה של הצמדה, לפי סדר עדיפויות (הראשון שמתקיים מנצח):
+
+| עדיפות | סוג | רדיוס | דוגמה |
+|---|---|---|---|
+| 1 | Anchor snap — נקודת עיגון תואמת | 28px | קצה חבל → יתד בגלגלת |
+| 2 | Mesh snap — שיני גלגלים סמוך | 22px | `gear_small` → `gear_large` |
+| 3 | Surface snap — הנחה על משטח | 18px | ארגז על קרש |
+| 4 | Grid snap | תמיד | רשת 16px |
+
+משוב מיידי: כשההצמדה פעילה, נקודת היעד מהבהבת + haptic selection feedback. חזותי חשוב יותר מדיוק.
+
+### 3.4 בחירה, סיבוב והיפוך
+
+Tap על רכיב מוצב → תפריט inline צף מעל הרכיב (לא מודאל, לא bottom sheet):
+
+```
+ ┌───────────────────────┐
+ │ ↺  ↻  ⇄  ⇅  ⚙  🗑     │
+ └───────────┬───────────┘
+             ▼
+        [ הרכיב ]
+```
+
+- ↺ ↻ — סיבוב בקפיצות לפי `rotationSnap` של הרכיב (90° לרוב, 15° למראות ולקרשים)
+- ⇄ ⇅ — היפוך אופקי/אנכי (רק לרכיבים עם `flippable: true`)
+- ⚙ — פתיחת inspector לפרמטרים (RPM של מנוע, עוצמת מאוורר, זווית שיגור)
+
+סיבוב חופשי: שתי אצבעות על הרכיב הנבחר = `rotation` חופשי עם snap רך ל-15°. מד זווית מופיע במרכז.
+
+### 3.5 כלי החיבור (Rope / Belt Tool)
+
+1. השחקן בוחר `rope` מהארגז → נכנס ל-MODE_CONNECT
+2. כל נקודות העיגון החוקיות בשלב מוארות בפולסים (הילה כחולה, רדיוס 24px)
+3. נגיעה בעוגן א' → הנקודה ננעלת, קו גומי עוקב אחרי האצבע
+4. עוגנים לא-חוקיים (אותו גוף, מרחק > maxLength) מעומעמים בזמן אמת
+5. נגיעה בעוגן ב' → החבל נוצר, haptic success
+6. נגיעה במקום ריק / כפתור ✕ → ביטול
+
+### 3.6 מצלמה, Pan ו-Zoom
+
+```ts
+const CAMERA = {
+  minZoom: 0.6,           // כל העולם נראה
+  maxZoom: 3.0,
+  defaultFit: 'CONTAIN',  // בטעינת שלב — התאמה לגבולות + padding 24px
+  panMomentum: 0.92,      // friction decay
+  edgeResistance: 0.35,   // "גומי" בגבולות העולם
+};
+```
+
+| מחווה | ב-EDIT | ב-RUNNING |
+|---|---|---|
+| אצבע אחת על רקע | Pan | Pan |
+| אצבע אחת על רכיב | גרירת הרכיב | Pan |
+| שתי אצבעות | Pinch zoom + pan | Pinch zoom + pan |
+| Double tap | zoom ל-1.5× סביב הנקודה | אותו דבר |
+| Double tap ב-zoom > 1.5 | חזרה ל-fit | אותו דבר |
+
+**Auto-follow ב-RUNNING:** אופציונלי בהגדרות. המצלמה עוקבת בעדינות (lerp 0.08) אחרי הגוף "הפעיל ביותר" — הגוף עם |velocity| הגבוה ביותר, עם היסטרזיס של 400ms כדי למנוע קפיצות. ברירת מחדל: כבוי — שחקנים מנוסים רוצים לראות הכול.
+
+### 3.7 Responsive Viewport
+
+עולם המשחק בגודל קבוע (1600×1200 יחידות). המצלמה מתאימה אותו למסך:
+
+```ts
+const scale = Math.min(screenW / WORLD_W, screenH_available / WORLD_H);
+// טלפון צר (390×844): עדיין רואים את כל העולם ב-zoom ~0.55 → צריך zoom-in לעבודה
+// טאבלט (1024×1366): רואים הכול בנוחות
+```
+
+- **טלפון** (< 600pt): ארגז תחתון, HUD מינימלי, עורך ברירת-מחדל ב-zoom 1.0 ממורכז על אזור המטרה.
+- **טאבלט** (≥ 600pt): ארגז הופך לעמודה צדדית (ב-LTR/ימין ב-RTL/שמאל), ברוחב 200pt, קנבס גדול יותר.
+- **תמיכה בסיבוב מסך:** portrait הוא המצב המומלץ. אם ב-landscape — הצג רמז "סובב לחוויה טובה יותר" פעם אחת.
+- **Safe areas:** `env(safe-area-inset-*)` לכל-הצדדים. בלי זה, ה-home indicator באייפון בולע את כפתור ההפעלה.
+
+### 3.8 פידבק ונגישות
+
+- **Haptics** (Capacitor Haptics): light בהרמה, selection בהצמדה, medium בהצבה, success בניצחון, warning בכישלון.
+- **מצב האטה:** בזמן ריצה, slider ×0.25–×1 שמשנה כמה `tick()` קורים לפריים (לא את `SIM.FIXED_DT`!) — כך הדטרמיניזם נשמר והשחקן יכול לנתח מה השתבש. פיצ'ר קריטי לפאזלים מורכבים.
+- **Colorblind-safe:** אין הסתמכות על צבע בלבד. חוקי/לא-חוקי גם בצורה (✓/✕), לא רק בירוק/אדום.
+- **RTL:** אם יש לוקליזציה לעברית — ה-UI מתהפך, הקנבס לא. עולם המשחק תמיד LTR.
+
+---
+
+## 4. מנגנון מניעת הפרת זכויות יוצרים (Legal & Branding Safety)
+
+### 4.1 הקו המנחה — מה מוגן ומה לא
+
+| ✅ מותר להשתמש (לא מוגן) | ❌ אסור בהחלט |
+|---|---|
+| מכניקות ורעיונות משחק (חוקי משחק אינם מוגנים בזכויות יוצרים) | השם "The Incredible Machine" / "TIM" / "Contraptions" |
+| הקונספט של פאזל תגובת-שרשרת | כל ספרייט, טקסטורה, צליל או מוזיקה מהמקור |
+| חוקי פיזיקה (גלגלת, גלגל שיניים, פתיל) | שמות הדמויות: Pokey, Mort, Mel, Ernie, Professor Tim, Curie, Newton, Bik, Sid |
+| טיפוסי רכיבים גנריים (כדור, מאוורר, נר) | פריסות שלבים מקוריות — אלה יצירה מוגנת |
+| סוגת "פאזל פיזיקלי" | קוד מקור, קבצי נתונים או reverse-engineering של assets |
+
+### 4.2 שלוש מלכודות שחייבים להכיר
+
+1. **"Rube Goldberg"** הוא סימן מסחר רשום (Rube Goldberg Inc.). אל תשתמש בו בשם האפליקציה, בכותרת בחנות, ב-subtitle או ב-keywords. אפשר לתאר את המשחק כ-"chain-reaction contraption puzzles" — זה תיאור גנרי ובטוח.
+2. מטא-דאטה בחנות = הסיכון הגדול ביותר. אל תכתוב "כמו TIM", "clone של The Incredible Machine", "מחווה ל-" בתיאור או ב-ASO keywords. שימוש בסימן מסחר של אחר במטא-דאטה הוא בדיוק מה שגורם להורדות מהחנות. גם בעמוד ה-Press Kit שלך — לא.
+3. אין שמות של מותגים בתוך המשחק. אין "Coca-Cola can", אין דמות שנראית כמו דמות מסחרית מוכרת. כל נכס חזותי — מקורי או ברישיון מפורש (CC0 / רכישה מסחרית עם חשבונית).
+
+### 4.3 תמה ויזואלית — ההמלצה
+
+✅ **המלצה ראשית: "Timber & Brass" — סדנת אומן מודרנית**
+
+עולם של שולחן עבודה גדול בסדנת נגרות/מסגרות: עץ אלון, פליז מבריק, ברגים, מלחציים. הפאזל "יושב" על קיר לוח-כלים (pegboard) — מה שנותן הצדקה דיאגטית מושלמת לרשת ההצמדה ולנקודות העיגון. סגנון: וקטור שטוח עם צללים רכים וספקולר עדין על מתכת, לא cartoon.
+
+- **פלטת צבעים:** רקע #2A2420 (עץ כהה) / משטח #0D9C5A0 (עץ בהיר) / פליז #C9973F / מבטא #FA7A13 (טורקיז/סכנה) #D9584B
+- **טיפוגרפיה:** Sans גיאומטרי כבד לכותרות + Mono לערכים מספריים
+- **למה זו הבחירה:** ניטרלית מבחינה משפטית, ברורה ויזואלית במסך קטן (הניגוד בין פליז לעץ עובד מצוין), ולא נשענת על נוסטלגיה ויזואלית של אף משחק אחר.
+
+חלופה א': "Neon Lab" — מעבדה עתידנית. רקע כהה, רכיבים זוהרים, אפקטי אור חזקים. יתרון: אור/לייזר נראים מדהים. חיסרון: קשה להבחין בין רכיבים דומים במסך קטן.
+
+חלופה ב': "Paper Machine" — עולם נייר מקופל. כל הרכיבים כאוריגמי/קרטון עם צללים. יתרון: ייחודי מאוד, קל לייצור assets, נעים. חיסרון: פחות קריא למכניקות מתכתיות.
+
+**שמות מוצע לאפליקציה:** Chainworks · Cogwright · Brasswork · Kludge · Tinker Hollow · Clank & Cogs
+**בעברית:** גלגל שן · שרשרת · קליק-קלאק
+
+לפני נעילת שם: בדוק ב-USPTO TESS, EUIPO, מרשם סימני המסחר הישראלי, ובחיפוש ישיר ב-App Store ו-Google Play. וקנה את הדומיין.
+
+### 4.4 טבלת שמות חלופיים — מקור → חדש
+
+| קטגוריה | המקור (אין להשתמש) | השם החדש | הצדקה |
+|---|---|---|---|
+| דמות ראשית | Professor Tim | "The Foreman" / דמות ידיים בלבד | אין דמות מזוהה, רק כפפות עבודה שמצביעות במדריך |
+| בעל חיים נע | Mort the Mouse | `walker_unit` — "ווקר" | רובוט צועד קטן. אותה מכניקה, אפס דמיון חזותי |
+| טורף/מכשול | Pokey the Cat / Ernie the Alligator | `sentry_block` — "סנטרי" | בוט חוסם סטטי שדוחף |
+| פיתיון | Cheese | `walker_beacon` — "משואה" | משואת אור שמושכת את הווקר |
+| מקור כוח חי | Mouse Motor / Monkey Bike | `flywheel_spring` — "גלגל תנופה" | מנגנון קפיצי דרוך. מסיר לגמרי את זווית בעלי החיים |
+| נשק | Revolver / Super Phazer | `punch_arm` + `launcher_tube` | הסרת נשק חם — גם משפטית וגם לדירוג גיל נמוך יותר |
+| חגים | Christmas Tree, Pumpkin, Valentine Balloon | לא נכללים | תמות חג = עומס רישוי ותרבות מיותר |
+| יעד | Bob's Fish Bowl / Laundry Basket | `bin_target` — "דלי איסוף" | גנרי לחלוטין |
+
+**כלל לסוכן הקוד: בכל הקוד, ה-assets וקבצי השלבים — אסור שיופיע אף אחד מהשמות בעמודה "המקור". גם לא בהערות, גם לא בשמות קבצים, גם לא ב-git commit messages.**
+
+### 4.5 קווים מנחים לעיצוב שלבים מקוריים
+
+אל תעתיק מפות. תעתיק את עקומת הלמידה. ניתוח הפדגוגיה של הז'אנר נותן את המבנה הבא:
+
+**מבנה הקמפיין — 60 שלבים**
+
+| חטיבה | שלבים | תפקיד | מגבלת רכיבים |
+|---|---|---|---|
+| A — יסודות | 1–12 | רכיב חדש אחד לכל שלב, פתרון יחיד כמעט מובן מאליו | 1–3 |
+| B — צירופים | 13–28 | שילוב 2–3 מכניקות שנלמדו. מופיע הפתרון המרובה הראשון | 3–6 |
+| C — טיימינג | 29–44 | פתילים, השהיות, סדר אירועים. הפתרון נכון רק בעיתוי הנכון | 5–9 |
+| D — מאסטר | 45–60 | שרשראות ארוכות, רכיבים "מיותרים" מטעים, אילוצי מרחב | 8–14 |
+
+**כללי הזהב לתכנון שלב**
+
+1. **חוק הרכיב החדש:** רכיב מוצג לראשונה בשלב שבו הוא הפתרון היחיד האפשרי. רק בשלב הבא הוא נהיה חלק מצירוף.
+2. **חוק 3 הצעדים:** שלב טוב דורש 3–7 קשרים סיבתיים. פחות = טריוויאלי. יותר = מתסכל בנייד.
+3. **חוק "הרגע":** לכל שלב צריכה להיות "תובנה" אחת ברורה — הרגע שבו השחקן מבין. אם אין — השלב הוא עבודת כפיים, לא פאזל.
+4. **חוק העודף:** בשלבים C ו-D, תן רכיב אחד או שניים שאינם נחוצים. זה מייצר את החיפוש האמיתי.
+5. **חוק הפתירות:** כל שלב חייב לפחות 2 פתרונות מאומתים שנשמרים כ-golden replay tests. אם יש רק אחד — התנאי צר מדי, הרחב אותו.
+6. **חוק המסך הקטן:** כל השלב חייב להיות קריא ב-zoom 1.0 על מסך 390pt. אם צריך לגלול כדי להבין את המטרה — עצב מחדש.
+
+**תהליך יצירת שלב (לסוכן הקוד)**
+
+1. בחר מכניקה-מטרה (למשל: "חבל דרך גלגלת מרים משקולת")
+2. הגדר את מצב הסיום (win condition) — לא את הדרך
+3. בנה את הגיאומטריה הקבועה (fixed parts) שחוסמת את הפתרון הטריוויאלי
+4. קבע את ארגז החלקים — המינימום הנדרש + 0–2 מטעים
+5. פתור בעצמך פעמיים בדרכים שונות → שמור כ-`solutions[]`
+6. הרץ את שני הפתרונות ב-headless → שניהם חייבים לעבור
+7. הרץ 20 הצבות אקראיות → אף אחת לא אמורה לעבור
+
+---
+
+## 5. מבנה הנתונים והקוד (Data Structure for Claude Code)
+
+### 5.1 JSON Schema — הגדרת שלב
+
+שמור כ-`schemas/level.schema.json`. כל קובץ שלב עובר ולידציה מולו בטעינה + ב-CI.
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://chainworks.game/schemas/level.schema.json",
+  "title": "ChainWorks Level",
+  "type": "object",
+  "required": ["schemaVersion", "id", "title", "world", "fixedParts", "partsBin", "winConditions"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^lvl_[a-z0-9_]+$" },
+    "title": { "type": "string", "maxLength": 48 },
+    "chapter": { "type": "string", "enum": ["A_FOUNDATIONS", "B_COMBOS", "C_TIMING", "D_MASTER"] },
+    "order": { "type": "integer", "minimum": 1 },
+    "difficulty": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "goalText": { "type": "string", "maxLength": 120,
+      "description": "מוצג ב-HUD. חייב לתאר תוצאה, לא שיטה." },
+    "hints": { "type": "array", "items": { "type": "string" }, "maxItems": 3 },
+    "world": {
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "number", "default": 1600 },
+        "height": { "type": "number", "default": 1200 },
+        "gravityY": { "type": "number", "default": 9.81 },
+        "timeLimitSec":{ "type": "number", "default": 90 },
+        "theme": { "type": "string", "default": "brass_timber" }
+      }
+    },
+    "fixedParts": {
+      "description": "רכיבים שהשחקן לא יכול להזיז או למחוק",
+      "type": "array",
+      "items": { "$ref": "#/definitions/placedPart" }
+    },
+    "preplacedParts": {
+      "description": "רכיבים מוצבים מראש שהשחקן *כן* יכול להזיז",
+      "type": "array",
+      "items": { "$ref": "#/definitions/placedPart" }
+    },
+    "partsBin": {
+      "description": "המלאי הזמין לשחקן",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["partType", "count"],
+        "additionalProperties": false,
+        "properties": {
+          "partType": { "type": "string" },
+          "count": { "type": "integer", "minimum": 1, "maximum": 99 },
+          "lockedParams": {
+            "type": "array", "items": { "type": "string" },
+            "description": "פרמטרים שהשחקן לא יכול לשנות בשלב הזה"
+          }
+        }
+      }
+    },
+    "connections": {
+      "description": "חיבורים קבועים מראש (חבלים/רצועות)",
+      "type": "array",
+      "items": { "$ref": "#/definitions/connection" }
+    },
+    "winConditions": {
+      "type": "array", "minItems": 1,
+      "items": { "$ref": "#/definitions/condition" }
+    },
+    "failConditions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/condition" }
+    },
+    "solutions": {
+      "description": "פתרונות מאומתים — משמשים ל-golden replay tests ולרמזים",
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["label", "parts"],
+        "properties": {
+          "label": { "type": "string" },
+          "parts": { "type": "array", "items": { "$ref": "#/definitions/placedPart" } },
+          "connections": { "type": "array", "items": { "$ref": "#/definitions/connection" } },
+          "expectedSolveTick": { "type": "integer",
+            "description": "tick שבו מצופה ניצחון (±10% סובלנות)" }
+        }
+      }
+    },
+    "definitions": {
+      "placedPart": {
+        "type": "object",
+        "required": ["id", "partType", "x", "y"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+          "partType": { "type": "string" },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "rotation": { "type": "number", "default": 0, "description": "מעלות, 0–359" },
+          "flipX": { "type": "boolean", "default": false },
+          "flipY": { "type": "boolean", "default": false },
+          "scale": { "type": "number", "default": 1, "minimum": 0.5, "maximum": 2 },
+          "tags": { "type": "array", "items": { "type": "string" },
+            "description": "תגיות לוגיות לתנאי ניצחון, למשל SUBJECT" },
+          "params": {
+            "type": "object",
+            "description": "פרמטרים ספציפיים לרכיב",
+            "properties": {
+              "rpm": { "type": "number", "minimum": 1, "maximum": 600 },
+              "direction": { "type": "string", "enum": ["CW", "CCW"] },
+              "power": { "type": "number", "minimum": 1, "maximum": 5 },
+              "angle": { "type": "number", "minimum": 0, "maximum": 359 },
+              "startsOn": { "type": "boolean" },
+              "startsLit": { "type": "boolean" },
+              "length": { "type": "number", "minimum": 10, "maximum": 600 },
+              "charge": { "type": "integer", "minimum": 1, "maximum": 5 },
+              "mode": { "type": "string", "enum": ["toggle", "momentary"] }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "connection": {
+        "type": "object",
+        "required": ["id", "kind", "from", "to"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["ROPE", "BELT", "WIRE"] },
+          "from": { "$ref": "#/definitions/anchorRef" },
+          "to": { "$ref": "#/definitions/anchorRef" },
+          "maxLength": { "type": "number",
+            "description": "ROPE/BELT בלבד. אם חסר — מחושב מהמרחק ההתחלתי ×1.05" },
+          "routedThrough": {
+            "type": "array", "items": { "$ref": "#/definitions/anchorRef" },
+            "description": "גלגלות שהחבל עובר דרכן, לפי סדר"
+          }
+        }
+      },
+      "anchorRef": {
+        "type": "object",
+        "required": ["partId"],
+        "additionalProperties": false,
+        "properties": {
+          "partId": { "type": "string" },
+          "anchorIdx":{ "type": "integer", "minimum": 0, "default": 0 }
+        }
+      },
+      "condition": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "type": "string",
+            "enum": ["CONTAINED","REACHED_ZONE","ENERGY_STATE","DESTROYED",
+              "TIMEOUT","SUBJECT_DESTROYED","LEFT_BOUNDS","ALL_OF","ANY_OF"] },
+          "subjectTag":{ "type": "string" },
+          "subjectId": { "type": "string" },
+          "containerId":{ "type": "string" },
+          "zoneId": { "type": "string" },
+          "targetId": { "type": "string" },
+          "nodeId": { "type": "string" },
+          "energy": { "type": "string",
+            "enum": ["ROTARY","TENSION","ELECTRIC","THERMAL","PNEUMATIC","LIGHT","IMPACT"] },
+          "active": { "type": "boolean" },
+          "holdMs": { "type": "number", "default": 500 },
+          "conditions":{ "type": "array", "items": { "$ref": "#/definitions/condition" } }
+        }
+      }
+    }
+  }
+}
+```
+
+### 5.2 דוגמת שלב מלאה
+
+`levels/A/lvl_a03_pulley_lift.json`
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "lvl_a03_pulley_lift",
+  "title": "משיכה מלמעלה",
+  "chapter": "A_FOUNDATIONS",
+  "order": 3,
+  "difficulty": 1,
+  "goalText": "הכנס את כדור העץ לדלי.",
+  "hints": [
+    "כדור כבד שנופל יכול למשוך משהו אחר למעלה.",
+    "גלגלת משנה את כיוון המשיכה."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 45 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 800, "y": 1180 },
+    { "id": "ledge_l", "partType": "plank_wood", "x": 300, "y": 400, "rotation": 0 },
+    { "id": "wall_mid", "partType": "wall_brick", "x": 800, "y": 800, "rotation": 90 },
+    { "id": "bucket", "partType": "bin_target", "x": 1250, "y": 1100 },
+    { "id": "shelf_r", "partType": "plank_wood", "x": 1250, "y": 300, "rotation": 0 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": 300, "y": 360, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [
+    { "partType": "pulley_wheel", "count": 1 },
+    { "partType": "rope", "count": 1 },
+    { "partType": "ball_lead", "count": 1 },
+    { "partType": "lever_seesaw", "count": 1 },
+    { "partType": "plank_wood", "count": 2 }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 600 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    {
+      "label": "גלגלת קלאסית",
+      "parts": [
+        { "id": "s_pul", "partType": "pulley_wheel", "x": 300, "y": 200 },
+        { "id": "s_lead", "partType": "ball_lead", "x": 560, "y": 180 },
+        { "id": "s_pl1", "partType": "plank_wood", "x": 900, "y": 560, "rotation": 20 }
+      ],
+      "connections": [
+        { "id": "c1", "kind": "ROPE", "from": { "partId": "s_lead" },
+          "to": { "partId": "subject" }, "routedThrough": [{ "partId": "s_pul" }],
+          "maxLength": 420 }
+      ],
+      "expectedSolveTick": 480
+    },
+    {
+      "label": "מנוף ומדרון",
+      "parts": [
+        { "id": "s_lev", "partType": "lever_seesaw", "x": 450, "y": 900, "rotation": 0 },
+        { "id": "s_ld2", "partType": "ball_lead", "x": 380, "y": 200 },
+        { "id": "s_pl2", "partType": "plank_wood", "x": 950, "y": 700, "rotation": 25 },
+        { "id": "s_pl3", "partType": "plank_wood", "x": 1150,"y": 900, "rotation": 15 }
+      ],
+      "connections": [],
+      "expectedSolveTick": 620
+    }
+  ]
+}
+```
+
+### 5.3 קטלוג הרכיבים כ-data
+
+כל רכיב הוא קובץ `data/parts/*.json`. `PartRegistry` טוען את כולם.
+
+```json
+{
+  "partType": "ball_rubber",
+  "displayKey": "part.ball_rubber",
+  "category": "DYNAMIC",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 14 },
+    "mass": 0.6,
+    "restitution": 0.85,
+    "friction": 0.80,
+    "linearDamping": 0.01,
+    "angularDamping": 0.02,
+    "gravityScale": 1.0,
+    "ccd": true
+  },
+  "tags": ["BOUNCY"],
+  "windFactor": 1.0,
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "rotationSnap": 0,
+    "flippable": false,
+    "sprite": "parts/ball_rubber.png",
+    "binIcon": "icons/ball_rubber.svg",
+    "hitboxPadding": 10
+  },
+  "params": {}
+}
+```
+
+```json
+{
+  "partType": "motor_electric",
+  "displayKey": "part.motor_electric",
+  "category": "POWER",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 48, "h": 48 }
+  },
+  "tags": ["METALLIC"],
+  "ports": [
+    { "id": "pwr", "dir": "IN", "energy": "ELECTRIC", "offset": { "x": -24, "y": 0 } },
+    { "id": "out", "dir": "OUT", "energy": "ROTARY", "offset": { "x": 24, "y": 0 } }
+  ],
+  "anchors": [
+    { "idx": 0, "kind": "ROTARY", "offset": { "x": 24, "y": 0 } }
+  ],
+  "editor": {
+    "rotatable": true, "rotationSnap": 90, "flippable": true,
+    "sprite": "parts/motor.png", "binIcon": "icons/motor.svg"
+  },
+  "params": {
+    "rpm": { "type": "number", "min": 30, "max": 600, "step": 30, "default": 180 },
+    "direction": { "type": "enum", "values": ["CW", "CCW"], "default": "CW" }
+  }
+}
+```
+
+### 5.4 פורמט שמירת התקדמות
+
+```json
+{
+  "schemaVersion": 1,
+  "profileId": "local",
+  "levels": {
+    "lvl_a03_pulley_lift": {
+      "solved": true,
+      "attempts": 7,
+      "bestPartCount": 3,
+      "bestSolveTick": 455,
+      "savedBuild": { "parts": [], "connections": [] },
+      "solvedAt": "2026-09-12T10:22:41Z"
+    }
+  },
+  "sandboxes": [
+    { "id": "sbx_01", "name": "הניסוי שלי", "updatedAt": "...",
+      "data": { "world": {}, "parts": [], "connections": [] } }
+  ],
+  "settings": {
+    "haptics": true, "sound": true, "music": true,
+    "cameraAutoFollow": false, "gridVisible": true, "locale": "he"
+  }
+}
+```
+
+### 5.5 ארכיטקטורת הקוד
+
+#### 5.5.1 המלצת פלטפורמה — הנימוק המלא
+
+| קריטריון | TS + Rapier + Pixi + Capacitor | Flutter + Flame + forge2d | Unity |
+|---|---|---|---|
+| התאמה ל-Claude Code | הכי חזק ⭐⭐⭐⭐⭐ ב-TS/React | טוב ⭐⭐⭐⭐ ב-Dart | פרויקט מבוסס editor ו-.meta files ⭐⭐ |
+| דטרמיניזם | מובטח ⭐⭐⭐⭐⭐ | עם timestep קבוע ⭐⭐⭐ | ⭐⭐ |
+| מהירות איטרציה | רענון בדפדפן בשנייה, גם מהנייד ⭐⭐⭐⭐⭐ | hot reload ⭐⭐⭐⭐ | ⭐⭐ |
+| ביצועים ~200 גופים | מספיק בהחלט (WASM) ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| גודל APK | ~15MB ⭐⭐⭐⭐ | ~25MB ⭐⭐⭐ | ~60MB ⭐⭐ |
+| בדיקה מהנייד | GitHub Pages → פותחים בדפדפן ⭐⭐⭐⭐⭐ | צריך build ⭐ | ⭐ |
+
+**הכרעה: TypeScript.** הסיבה המכריעה בהקשר שלך — אתה עובד מהנייד. עם הסטאק הזה, Claude Code דוחף ל-GitHub, ואתה פותח את המשחק בדפדפן בטלפון תוך 30 שניות לבדיקה. עם Flutter או Unity, כל בדיקה דורשת סביבת build. הפער בפרודוקטיביות עצום.
+
+ה-Capacitor נכנס רק בשלב M7, כשהמשחק כבר עובד.
+
+#### 5.5.2 מבנה תיקיות
+
+```
+chainworks/
+├── package.json                  # pnpm, vite, typescript strict
+├── vite.config.ts
+├── capacitor.config.ts           # מתווסף ב-M7
+├── schemas/
+│   └── level.schema.json
+├── data/
+│   └── parts/*.json              # קטלוג הרכיבים (52 קבצים)
+├── levels/
+│   ├── A/*.json  B/*.json  C/*.json  D/*.json
+├── assets/
+│   ├── sprites/  icons/  audio/  fonts/
+├── src/
+│   ├── main.tsx
+│   ├── core/
+│   │   ├── sim/
+│   │   │   ├── SimWorld.ts          # עטיפה ל-RAPIER.World, יצירה/הרס
+│   │   │   ├── FixedStepLoop.ts     # לולאת המשחק (סעיף 2.4)
+│   │   │   ├── BodyFactory.ts       # PartDef → RAPIER.RigidBody + Collider
+│   │   │   ├── CollisionRouter.ts   # EventQueue → אירועי IMPACT
+│   │   │   ├── CollisionGroups.ts   # ביטמסקות
+│   │   │   └── Determinism.ts       # מיון, snapshot hash, בדיקות
+│   │   ├── graph/
+│   │   │   ├── EnergyGraph.ts       # צמתים, קשתות, מיון טופולוגי, זיהוי מעגלים
+│   │   │   ├── RopeNetwork.ts       # אילוצי מתיחה + ניתוב דרך גלגלות
+│   │   │   ├── GearTrain.ts         # צימוד גלגלים, יחסים, רצועות
+│   │   │   ├── ElectricBus.ts       # התפשטות חשמל
+│   │   │   ├── ThermalSystem.ts     # פתילים, הצתות, שריפות
+│   │   │   ├── FieldSystem.ts       # רוח / ואקום / מגנט / אנטי-כבידה
+│   │   │   └── LightSystem.ts       # ray-cast, חיישנים, מראות
+│   │   ├── parts/
+│   │   │   ├── PartRegistry.ts      # טעינה + ולידציה של data/parts
+│   │   │   ├── PartDef.ts           # טיפוסים
+│   │   │   ├── InteractionRules.ts  # מטריצת 1.4
+│   │   │   └── behaviors/           # קובץ לכל רכיב עם לוגיקה ייחודית
+│   │   │       ├── FuseCord.ts  ChargeBarrel.ts  PunchArm.ts
+│   │   │       ├── Conveyor.ts  WalkerUnit.ts  Balloon.ts ...
+│   │   └── level/
+│   │       ├── LevelSchema.ts       # טיפוסי Zod (נגזרים מה-JSON Schema)
+│   │       ├── LevelLoader.ts       # JSON → editorState → simState
+│   │       ├── EditorState.ts       # המקור היחיד לאמת
+│   │       ├── WinConditions.ts
+│   │       └── ReplayRunner.ts      # הרצה headless לטסטים
+│   ├── render/
+│   │   ├── PixiApp.ts  Camera.ts  PartSprite.ts
+│   │   ├── RopeRenderer.ts         # ציור חבלים כ-spline
+│   │   ├── GhostLayer.ts           # תצוגת snap preview
+│   │   ├── EffectsLayer.ts         # עשן, ניצוצות, פיצוצים
+│   │   └── Interpolator.ts         # החלקה בין ticks
+│   ├── input/
+│   │   ├── GestureController.ts    # pan/pinch/tap/long-press
+│   │   ├── DragDropController.ts   # מכונת המצבים של סעיף 3.2
+│   │   ├── SnapSolver.ts           # היררכיית ההצמדה של 3.3
+│   │   └── ConnectionTool.ts       # כלי החבל של 3.5
+│   ├── ui/
+│   │   ├── screens/  MainMenu  LevelSelect  GameScreen  Sandbox  Settings
+│   │   └── components/  PartsBin  PartInspector  GoalBanner
+│   │       PlayButton  SpeedSlider  WinOverlay  HintSheet
+│   ├── state/
+│   │   ├── gameStore.ts            # zustand
+│   │   └── progressStore.ts
+│   ├── platform/
+│   │   ├── storage.ts              # Capacitor Preferences / localStorage
+│   │   ├── haptics.ts  audio.ts
+│   └── i18n/  he.json  en.json
+└── tests/
+    ├── determinism.test.ts         # hash זהה אחרי 600 ticks, 3 ריצות
+    ├── solutions.test.ts           # כל solutions[] בכל שלב עוברים
+    ├── schema.test.ts              # כל קובץ שלב תקין מול ה-schema
+    └── unsolvable.test.ts          # הצבות אקראיות לא פותרות
+```
+
+#### 5.5.3 חוזי הליבה (interfaces שהסוכן מתחיל מהם)
+
+```ts
+// core/parts/PartDef.ts
+export interface PartDef {
+  partType: string;
+  displayKey: string;
+  category: 'STATIC'|'DYNAMIC'|'MECHANISM'|'POWER'|'PNEUMATIC'|'THERMAL'|'LIGHT'|'ACTUATOR'|'GOAL';
+  tier: 'P0'|'P1'|'P2';
+  body: BodySpec;
+  tags: string[];
+  windFactor?: number;
+  ports: Port[];
+  anchors: Anchor[];
+  editor: EditorSpec;
+  params: Record<string, ParamSpec>;
+}
+
+// core/parts/behaviors/Behavior.ts
+export interface PartBehavior {
+  readonly partType: string;
+  onCreate(ctx: SimContext, inst: PartInstance): void;
+  onTick(ctx: SimContext, inst: PartInstance): void;
+  onEnergy(ctx: SimContext, inst: PartInstance, port: string, e: EnergySignal): void;
+  onImpact(ctx: SimContext, inst: PartInstance, other: PartInstance, speed: number): void;
+  onDestroy(ctx: SimContext, inst: PartInstance): void;
+}
+// כל רכיב ממש רק את מה שרלוונטי לו. בסיס עם מימושים ריקים.
+
+// core/graph/EnergyGraph.ts
+export interface EnergyGraph {
+  addNode(id: string, ports: Port[]): void;
+  connect(fromNode: string, fromPort: string, toNode: string, toPort: string): void;
+  emit(nodeId: string, port: string, signal: EnergySignal): void;
+  read(nodeId: string, port: string): EnergySignal | null;
+  propagate(): void;   // מיון טופולוגי; מעגלים נפתרים ב-2 מעברים max
+  clear(): void;
+}
+```
+
+#### 5.5.4 קבוצות התנגשות
+
+```ts
+export const GROUP = {
+  STATIC_GEOMETRY: 0b0000_0001,
+  DYNAMIC_BODY:     0b0000_0010,
+  MECHANISM:        0b0000_0100,
+  SENSOR_ZONE:      0b0000_1000,
+  WALKER:           0b0001_0000,
+  PREVIEW_GHOST:    0b0010_0000,   // לא מתנגש בכלום, לתצוגה בלבד
+};
+// SENSOR_ZONE: isSensor=true, מתנגש עם DYNAMIC_BODY | WALKER בלבד
+// PREVIEW_GHOST: אף פעם לא נכנס לעולם הפיזיקה — בדיקת חפיפה ידנית
+```
+
+### 5.6 תוכנית מימוש — Milestones לשימוש מול Claude Code
+
+הזן את השלבים בזה אחר זה. **אל תזין את כל המסמך בבת אחת** — זה מוביל לקוד רדוד.
+
+| # | Milestone | תוצר | קריטריון קבלה |
+|---|---|---|---|
+| M0 | Bootstrap | Vite + TS strict + Pixi + Rapier נטענים, קנבס ריק | קובייה נופלת על רצפה ב-60fps |
+| M1 | Sim core | `SimWorld`, `FixedStepLoop`, `BodyFactory`, `Determinism` | טסט: hash זהה אחרי 600 ticks, 3 ריצות |
+| M2 | Part registry + P0 static/dynamic | 12 רכיבים ראשונים מ-data-JSON | טעינת שלב hard-coded, כדורים מתגלגלים על קרשים |
+| M3 | Level loader + win conditions | Zod schema, `lvl_a01`, מכונת מצבים, reset | שלב 1 ניתן לפתירה ולאיפוס אינסופי |
+| M4 | Energy graph + חבלים וגלגלים | `EnergyGraph`, `RopeNetwork`, `GearTrain`, `ElectricBus` | מנוע→גלגל→מסוע עובד. גלגלת מרימה משקולת |
+| M5 | Mobile input | `GestureController`, `DragDropController`, `SnapSolver`, `ConnectionTool` | אפשר לבנות פתרון שלם באצבע אחת בטלפון |
+| M6 | UI shell | PartsBin, Inspector, HUD, LevelSelect, SpeedSlider | זרימה מלאה: תפריט→שלב→פתרון→שלב הבא |
+| M7 | Capacitor + תמות | assets של Brass & Timber, haptics, אודיו, build ל-iOS/Android | APK רץ במכשיר אמיתי ב-60fps |
+| M8 | תוכן | כל 60 שלבים + P1 + golden `solutions[]` | כל `solutions[]` עוברים ב-CI tests |
+| M9 | Sandbox | מצב חופשי, שמירה, שיתוף שלבים | משתמש יוצר ומשתף שלב |
+
+### 5.7 תקציב ביצועים
+
+| מדד | יעד | תקרה |
+|---|---|---|
+| FPS במכשיר בינוני (Pixel 6a / iPhone 12) | 60 | לא יורד מ-50 |
+| גופים דינמיים פעילים | ≤ 120 | 250 |
+| זמן `world.step()` | < 3ms | 6ms |
+| זמן `graph.propagate()` | < 0.5ms | 1.5ms |
+| זמן טעינת שלב | < 200ms | 400ms |
+| זיכרון | — | 180MB / 280MB |
+| גודל APK/IPA | < 25MB | 45MB |
+
+---
+
+## 6. הנחיות לעבודה מול Claude Code
+
+**הפרומפט הפותח המומלץ:**
+
+> אנחנו בונים משחק פאזל פיזיקלי בשם ChainWorks. המפרט המלא נמצא ב-docs/GDD.md — קרא אותו לפני שאתה כותב שורת קוד. אנחנו עובדים לפי Milestones. אתה מממש רק את M0 ועוצר. אל תיגע בשום דבר מעבר לזה.
+
+**כללי ברזל לכל הפרויקט:**
+
+1. TypeScript strict. אפס `any`.
+2. אפס `Math.random()` ואפס `Date.now()` בתוך `core/sim` ו-`core/graph`.
+3. כל רכיב מוגדר ב-data JSON, לא ב-hard-code.
+4. `editorState` הוא read-only במצב RUNNING.
+5. אחרי כל Milestone: הרץ `pnpm test` והראה לי שהכול ירוק.
+
+**הרגלים שישתלמו:**
+
+- בקש `CLAUDE.md` בשורש הפרויקט עם 5 כללי הברזל — הסוכן קורא אותו אוטומטית בכל סשן.
+- בסוף כל Milestone, בקש commit נפרד עם תיאור ברור.
+- כשמשהו נשבר בפיזיקה, בקש קודם טסט שמשחזר את הבאג, ורק אחר כך תיקון.
+
+---
+
+## 7. אריזה נייטיבית והוצאה לחנויות (Release Pipeline)
+
+### 7.1 מה Capacitor באמת מייצר
+
+"זו לא "אפליקציית אתר. Capacitor מייצר פרויקט Android Studio ופרויקט Xcode אמיתי, עם קוד נייטיב, הרשאות, אייקונים ו-splash. התוצר הוא .aab ו-.ipa רגילים לחלוטין — בדיוק מה שהחנויות מצפות לו.
+
+```
+chainworks/
+├── android/           ← פרויקט Gradle מלא. נכנס ל-git.
+│   └── app/build.gradle  (versionCode, versionName, minSdk 24, targetSdk 35)
+├── ios/App/           ← פרויקט Xcode מלא. נכנס ל-git.
+│   └── App.xcodeproj  (deployment target 15.0)
+└── capacitor.config.ts
+```
+
+```ts
+// capacitor.config.ts
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.yourstudio.chainworks',  // reverse-DNS, לא ניתן לשינוי אחרי פרסום!
+  appName: 'ChainWorks',
+  webDir: 'dist',
+  android: { allowMixedContent: false, webContentsDebuggingEnabled: false },
+  ios:     { contentInset: 'never', scrollEnabled: false },
+  plugins: {
+    SplashScreen: { launchAutoHide: false, backgroundColor: '#2A2420' },
+    StatusBar:    { style: 'DARK', overlaysWebView: false },
+  },
+  server: { androidScheme: 'https' },  // חובה — בלי זה WASM לא נטען באנדרואיד
+};
+export default config;
+```
+
+⚠️ הגוטצ'ה הגדולה ביותר: טעינת ה-WASM של Rapier בתוך WebView. חייבים `vite-plugin-wasm` + `vite-plugin-top-level-await`, וטעינה אסינכרונית מפורשת (`await RAPIER.init()`) לפני יצירת העולם. בדפדפן זה "סתם עובד"; ב-WKWebView זה נשבר בשקט אם ה-MIME type שגוי. בדוק את זה בסוף M7 — מוקדם ככל האפשר, לא בדפדוק שנשקט אם ה-MIME.
+
+### 7.2 בנייה מהנייד — הצינור המלא
+
+זו הנקודה הקריטית בשבילך: **אתה לא צריך מחשב.** הכול דרך GitHub Actions.
+
+**אנדרואיד — קל**
+
+`ubuntu-latest` runner, חינם למאגר ציבורי:
+
+```
+npm ci → npm run build → npx cap sync android
+→ ./gradlew bundleRelease → עם חתימה keystore מ-GitHub Secrets
+→ העלאה אוטומטית ל-Play Console (internal track) עם r0adkll/upload-google-play
+```
+
+מרגע ה-push ועד ל-build במסלול הפנימי בפליי: ~8 דקות. אתה מתקין מהטלפון.
+
+**iOS — אפשרי, אבל דורש הכנה**
+
+`macos-latest` runner (עולה 10× מהמכסה, אבל ריצה אחת ≈ 12 דקות):
+
+```
+npx cap sync ios → fastlane gym (archive + export)
+→ עם חתימה App Store Connect API Key (.p8) מ-Secrets
+→ fastlane pilot upload → TestFlight
+```
+
+חלופה קלה יותר: **Codemagic** — יש להם תמיכה מובנית ב-Capacitor, ניהול חתימות אוטומטי, 500 דקות חינם בחודש. מהטלפון זה נוח בהרבה מלהילחם ב-fastlane.
+
+**מה אתה חייב להשיג לפני M7**
+
+| פריט | עלות | הערה |
+|---|---|---|
+| Google Play Console | $25 חד-פעמי | אימות זהות — יכול לקחת שבוע |
+| Apple Developer Program | $99 לשנה | אימות יכול לקחת 1–2 שבועות. התחל עכשיו |
+| Android keystore | חינם | צור פעם אחת, גבה בכספת. אובדן = אי אפשר לעדכן את האפליקציה לעולם |
+| App Store Connect API Key | חינם | .p8 — מאפשר חתימה אוטומטית בלי Mac |
+| דומיין + מדיניות פרטיות | ~$12 לשנה | חובה בשתי החנויות, גם למשחק בלי איסוף נתונים |
+
+### 7.3 עמידה בכללי החנויות
+
+**Apple — שתי ההנחיות הרלוונטיות**
+
+- **4.2 Minimum Functionality.** ההגנה שלך: המשחק עובד לגמרי אופליין, כל הנכסים והשלבים ארוזים ב-bundle, יש haptics נייטיביים, אין WebView שגולש לאינטרנט, ויש משחקיות אמיתית. זה עובר — משחקים רבים בחנות בנויים כך. אל תטען שלבים מהשרת בגרסה הראשונה — זה בדיוק מה שמפעיל את 4.2.
+- **2.1 App Completeness.** גרסה ראשונה עם 60 שלבים, בלי crashes, בלי "coming soon". שלבים נעולים זה בסדר; מסכים ריקים זה לא.
+
+**Google Play**
+
+- **Data Safety form** — הצהר "no data collected". זה משתנה אם תוסיף analytics, ודורש עדכון.
+- **Target API level** — Play דורש targetSdk עדכני (35 נכון ל-2026). זה מתעדכן כל שנה, ומי שלא מעדכן — האפליקציה נעלמת מהחנות.
+- **AAB בלבד, לא APK.**
+
+**דירוג גיל**
+
+עם הטבלה בסעיף 4.4 (בלי נשק חם, בלי בעלי חיים נפגעים, בלי דם) אתה מקבל 4+/Everyone. זה פותח את כל קהל היעד. אם תוסיף פיצוצים ריאליסטיים או דמויות שנפגעות — תעלה ל-9+/Teen ותצמצם את השוק.
+
+### 7.4 נכסים חנות נדרשים
+
+| נכס | אנדרואיד | iOS |
+|---|---|---|
+| אייקון | 512×512 PNG | 1024×1024 PNG (בלי שקיפות, בלי פינות מעוגלות) |
+| Feature graphic | 1024×500 | — |
+| צילומי מסך | 2–8, מינ' 320px | חובה iPhone 6.9" + 6.5"; אם תומך iPad |
+| וידאו תצוגה | אופציונלי (YouTube) | אופציונלי (App Preview, 15–30s) |
+| תיאור | 4000 תווים | 4000 תווים + subtitle 30 תווים |
+| קישור מדיניות פרטיות | חובה | חובה |
+
+**טיפ:** צילומי המסך הם 80% מהחלטת ההורדה. צלם 6 מסכים שמראים שלבים שונים באמצע ריצה, עם טקסט-על קצר שמסביר את המכניקה. לא מסכי תפריט.
+
+### 7.5 עדכון ל-Milestones
+
+| # | Milestone | מה מתווסף |
+|---|---|---|
+| M7a | Native shell מוקדם | `cap add android/ios`, בדיקת WASM אמיתי במכשיר, splash, haptics. מוקדם, לא בסוף |
+| M7b | CI/CD | GitHub Actions: build אנדרואיד → Play internal track. אחר כך iOS → TestFlight |
+| M10 | Store readiness | אייקונים, צילומי מסך, מדיניות פרטיות, שאלון Data Safety, דירוג גיל, תיאורים בשתי השפות |
+| M11 | Soft launch | פרסום במדינה אחת קטנה, מעקב אחרי crash rate ו-retention, תיקונים, ואז פרסום גלובלי |
+
+**כלל מעשי:** בצע `cap add android` כבר ב-M7a, לא אחרי שהמשחק גמור. בעיות WebView, ביצועים במכשירים חלשים וטעינת WASM אותנטית מתגלות רק על מכשיר אמיתי — ועדיף לגלות אותן כשיש 10 שלבים ולא 60.
+
+---
+
+## נספח: 10 השלבים הראשונים (שלד לחטיבה A)
+
+| # | שם | רכיב חדש | המכניקה הנלמדת |
+|---|---|---|---|
+| A01 | נפילה חופשית | `plank_wood` | כבידה + מדרון |
+| A02 | קפיצה | `ball_rubber`, `springboard` | אלסטיות והחזרה |
+| A03 | משיכה מלמעלה | `pulley_wheel`, `rope` | חבל משנה כיוון כוח |
+| A04 | כוח המנוף | `lever_seesaw` | המרת נפילה לזריקה |
+| A05 | רוח בגב | `fan_blower`, `outlet_power`, `balloon_lift` | שדה אוויר + כבידה שלילית |
+| A06 | הלחיצה | `switch_plate` | טריגר מגע → חשמל |
+| A07 | גלגלי שיניים | `gear_small`, `gear_large`, `motor_electric` | יחס העברה והיפוך כיוון |
+| A08 | הפתיל | `candle`, `fuse_cord`, `charge_barrel` | השהיה מבוקרת בזמן |
+| A09 | הגזירה | `cutter_shears`, `spike_pin` | ניתוק וחיתוך |
+| A10 | האגרוף | `punch_arm`, `crate_wood` | אימפולס מכוון |
+
+כל שלב ב-A מציג רכיב אחד חדש, נפתר ב-1–3 הצבות, ואורך פחות מ-90 שניות לשחקן חדש.
