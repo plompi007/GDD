@@ -1,0 +1,43 @@
+import type * as RAPIER from '@dimforge/rapier2d-deterministic';
+import { buildBody } from '../sim/BodyFactory.ts';
+import { SIM } from '../sim/constants.ts';
+import { sortedById } from '../sim/Determinism.ts';
+import type { PartRegistry } from '../parts/PartRegistry.ts';
+import type { EditorPart, EditorState } from './EditorState.ts';
+import { LevelRuntime } from './LevelRuntime.ts';
+import type { LevelDef } from './LevelSchema.ts';
+
+/** Merges a level's fixed + preplaced parts into the single editable source of truth. */
+export function editorStateFromLevel(level: LevelDef): EditorState {
+  const parts: EditorPart[] = [
+    ...level.fixedParts.map((p): EditorPart => ({ ...p, locked: true })),
+    ...level.preplacedParts.map((p): EditorPart => ({ ...p, locked: false })),
+  ];
+  return { parts, connections: [...level.connections] };
+}
+
+/**
+ * Builds live Rapier bodies for every part in editorState (GDD §2.5: this is
+ * the *only* path into simulation state — never mutate a running world
+ * in place). Creation order is sorted by part id so determinism never
+ * depends on array/object iteration order (GDD §2.6.2).
+ */
+export function buildSimFromEditorState(
+  world: RAPIER.World,
+  editorState: EditorState,
+  registry: PartRegistry,
+): LevelRuntime {
+  const runtime = new LevelRuntime();
+  for (const part of sortedById(editorState.parts)) {
+    const def = registry.get(part.partType);
+    // Level JSON places parts in world-space units (GDD's WORLD_WIDTH/HEIGHT
+    // grid); Rapier itself always works in meters (GDD §2.2).
+    const { rigidBody, collider } = buildBody(world, def.body, {
+      x: part.x / SIM.PIXELS_PER_METER,
+      y: part.y / SIM.PIXELS_PER_METER,
+      rotation: (part.rotation * Math.PI) / 180,
+    });
+    runtime.register({ id: part.id, def, rigidBody, collider, tags: part.tags });
+  }
+  return runtime;
+}

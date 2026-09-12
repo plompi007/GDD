@@ -1,4 +1,5 @@
 import './tests/determinism.ts';
+import './tests/level-a01.ts';
 import { runAll } from './registry.ts';
 
 declare global {

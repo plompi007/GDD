@@ -1,0 +1,22 @@
+{
+  "partType": "zone_goal",
+  "displayKey": "part.zone_goal",
+  "category": "GOAL",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 1.5, "h": 1.5 },
+    "isSensor": true
+  },
+  "tags": [],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "rotationSnap": 0,
+    "flippable": false,
+    "sprite": "parts/zone_goal.png",
+    "binIcon": "icons/zone_goal.svg"
+  },
+  "params": {}
+}

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a01_free_fall",
+  "title": "נפילה חופשית",
+  "chapter": "A_FOUNDATIONS",
+  "order": 1,
+  "difficulty": 1,
+  "goalText": "תן לכדור להגיע לאזור המסומן.",
+  "hints": ["כבידה בלבד. עקוב אחרי הכדור."],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20, "theme": "brass_timber" },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 800, "y": 1180 },
+    { "id": "ramp", "partType": "plank_wood", "x": 500, "y": 700, "rotation": 15 },
+    { "id": "goal", "partType": "zone_goal", "x": 610, "y": 790 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": 460, "y": 550, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal", "holdMs": 0 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT", "holdMs": 0 },
+    { "type": "TIMEOUT", "holdMs": 0 }
+  ],
+  "solutions": [
+    { "label": "מתגלגל מעצמו", "parts": [], "connections": [] }
+  ]
+}

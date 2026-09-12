@@ -1,11 +1,10 @@
 import * as RAPIER from '@dimforge/rapier2d-deterministic';
-import { Application, Graphics } from 'pixi.js';
-import { buildBody } from './core/sim/BodyFactory.ts';
-import { SIM } from './core/sim/constants.ts';
-import { FixedStepLoop } from './core/sim/FixedStepLoop.ts';
-import { SimWorld } from './core/sim/SimWorld.ts';
+import { Application, Container, Graphics, Text } from 'pixi.js';
 import type { PartDef } from './core/parts/PartDef.ts';
 import { loadPartRegistry } from './core/parts/PartRegistry.ts';
+import { SIM } from './core/sim/constants.ts';
+import { loadLevelById } from './core/level/LevelCatalog.ts';
+import { GameSession } from './core/level/GameSession.ts';
 
 const CATEGORY_COLOR: Record<PartDef['category'], number> = {
   STATIC: 0xc9973f,
@@ -23,12 +22,13 @@ const CATEGORY_COLOR: Record<PartDef['category'], number> = {
 function spriteForPart(def: PartDef): Graphics {
   const g = new Graphics();
   const color = CATEGORY_COLOR[def.category];
+  const alpha = def.body.isSensor ? 0.35 : 1;
   if (def.body.shape.kind === 'ball') {
-    g.circle(0, 0, def.body.shape.radius * SIM.PIXELS_PER_METER).fill(color);
+    g.circle(0, 0, def.body.shape.radius * SIM.PIXELS_PER_METER).fill({ color, alpha });
   } else {
     const w = def.body.shape.w * SIM.PIXELS_PER_METER;
     const h = def.body.shape.h * SIM.PIXELS_PER_METER;
-    g.rect(-w / 2, -h / 2, w, h).fill(color);
+    g.rect(-w / 2, -h / 2, w, h).fill({ color, alpha });
   }
   return g;
 }
@@ -47,50 +47,53 @@ async function main(): Promise<void> {
   await app.init({ background: '#2a2420', resizeTo: window, preference: 'webgl' });
   document.getElementById('app')!.appendChild(app.canvas);
 
-  const parts = loadPartRegistry();
-  const simWorld = new SimWorld();
+  const registry = loadPartRegistry();
+  const level = loadLevelById('lvl_a01_free_fall');
+  const session = new GameSession(level, registry);
 
-  // Temporary hard-coded scene (M2 acceptance: "balls roll on planks"). The
-  // real level format arrives in M3's LevelLoader.
-  const screenWidthM = app.screen.width / SIM.PIXELS_PER_METER;
-  const screenHeightM = app.screen.height / SIM.PIXELS_PER_METER;
-  const centerXM = screenWidthM / 2;
+  const worldLayer = new Container();
+  app.stage.addChild(worldLayer);
+  // Fit the level's fixed WORLD_WIDTH/HEIGHT grid to whatever the screen is (GDD §3.7 CONTAIN fit).
+  const fitScale = Math.min(app.screen.width / level.world.width, app.screen.height / level.world.height);
+  worldLayer.scale.set(fitScale);
 
-  interface Placed {
-    def: PartDef;
-    body: RAPIER.RigidBody;
-    sprite: Graphics;
+  const label = new Text({
+    text: '',
+    style: { fill: 0xffffff, fontSize: 18 },
+  });
+  label.position.set(12, 12);
+  app.stage.addChild(label);
+
+  let sprites: { sprite: Graphics; body: RAPIER.RigidBody }[] = [];
+
+  function rebuildSpritesFromRuntime(): void {
+    worldLayer.removeChildren();
+    sprites = [];
+    if (!session.runtime) return;
+    for (const part of session.runtime.all()) {
+      const sprite = spriteForPart(part.def);
+      worldLayer.addChild(sprite);
+      syncSprite(sprite, part.rigidBody);
+      sprites.push({ sprite, body: part.rigidBody });
+    }
   }
-  const placed: Placed[] = [];
 
-  function place(partType: string, x: number, y: number, rotationDeg = 0): Placed {
-    const def = parts.get(partType);
-    const { rigidBody } = buildBody(simWorld.rapier, def.body, { x, y, rotation: (rotationDeg * Math.PI) / 180 });
-    const sprite = spriteForPart(def);
-    app.stage.addChild(sprite);
-    syncSprite(sprite, rigidBody);
-    const entry: Placed = { def, body: rigidBody, sprite };
-    placed.push(entry);
-    return entry;
-  }
+  session.play();
+  rebuildSpritesFromRuntime();
 
-  place('floor_ground', centerXM, screenHeightM - 1);
-  place('plank_wood', centerXM - 3, 3, 20);
-  place('plank_wood', centerXM + 3, 6, -20);
-  place('ball_wood', centerXM - 3, 1.5);
-  place('ball_rubber', centerXM + 3, 4.5);
-
-  const dynamicBodies = placed.filter((p) => p.def.body.type === 'dynamic');
-
-  const loop = new FixedStepLoop({
-    isRunning: () => true,
-    onTick: () => simWorld.step(),
-    onRender: () => {
-      for (const p of dynamicBodies) syncSprite(p.sprite, p.body);
-    },
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'r') {
+      session.reset();
+      session.play();
+      rebuildSpritesFromRuntime();
+    }
   });
 
-  app.ticker.add((ticker) => loop.frame(ticker.deltaMS / 1000));
+  app.ticker.add((ticker) => {
+    session.frame(ticker.deltaMS / 1000);
+    for (const s of sprites) syncSprite(s.sprite, s.body);
+    label.text = `${level.title} — ${session.state}${session.failReason ? ` (${session.failReason})` : ''} — press R to reset`;
+  });
 }
 
 void main();
