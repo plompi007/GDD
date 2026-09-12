@@ -2,6 +2,7 @@ import { Application } from 'pixi.js';
 import { loadAllLevels } from './core/level/LevelCatalog.ts';
 import { loadPartRegistry } from './core/parts/PartRegistry.ts';
 import { GameScreen } from './ui/GameScreen.ts';
+import { ensureStylesInjected } from './ui/styles.ts';
 
 declare global {
   interface Window {
@@ -10,10 +11,18 @@ declare global {
   }
 }
 
+const CHAPTER_LABEL: Record<string, string> = {
+  A_FOUNDATIONS: 'יסודות',
+  B_COMBOS: 'צירופים',
+  C_TIMING: 'טיימינג',
+  D_MASTER: 'מאסטר',
+};
+
 // PixiJS's async Application.init() never resolves when awaited at module top
 // level in a Vite production build (github.com/pixijs/pixijs/issues/10456).
 // Wrapping in an async IIFE avoids top-level await entirely.
 async function main(): Promise<void> {
+  ensureStylesInjected();
   const app = new Application();
   await app.init({ background: '#2a2420', resizeTo: window, preference: 'webgl' });
 
@@ -32,21 +41,40 @@ async function main(): Promise<void> {
     currentScreen = null;
 
     menuEl = document.createElement('div');
-    menuEl.style.cssText =
-      'position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:#2a2420; color:#fff; font-family:sans-serif; overflow:auto; padding:24px;';
+    menuEl.className = 'cw-menu';
 
-    const title = document.createElement('h1');
-    title.textContent = 'ChainWorks';
-    title.style.marginBottom = '8px';
-    menuEl.appendChild(title);
+    const wordmark = document.createElement('h1');
+    wordmark.className = 'cw-wordmark';
+    wordmark.textContent = 'ChainWorks';
+    menuEl.appendChild(wordmark);
+
+    const tagline = document.createElement('p');
+    tagline.className = 'cw-tagline';
+    tagline.textContent = 'פאזלים של תגובת שרשרת פיזיקלית';
+    menuEl.appendChild(tagline);
+
+    const grid = document.createElement('div');
+    grid.className = 'cw-level-grid';
+    menuEl.appendChild(grid);
 
     for (const level of levels) {
-      const btn = document.createElement('button');
-      btn.textContent = `${level.title}${level.order ? ` (${level.order})` : ''}`;
-      btn.dataset.levelId = level.id;
-      btn.style.cssText = 'font-size:16px; padding:10px 28px; min-width:220px;';
-      btn.addEventListener('click', () => showLevel(level.id));
-      menuEl?.appendChild(btn);
+      const card = document.createElement('button');
+      card.className = 'cw-level-card';
+      card.dataset.levelId = level.id;
+
+      const orderEl = document.createElement('span');
+      orderEl.className = 'cw-level-order';
+      const chapterLabel = level.chapter ? CHAPTER_LABEL[level.chapter] : undefined;
+      orderEl.textContent = [level.order ? `שלב ${level.order}` : null, chapterLabel].filter(Boolean).join(' · ');
+      card.appendChild(orderEl);
+
+      const titleEl = document.createElement('span');
+      titleEl.className = 'cw-level-title';
+      titleEl.textContent = level.title;
+      card.appendChild(titleEl);
+
+      card.addEventListener('click', () => showLevel(level.id));
+      grid.appendChild(card);
     }
     root.appendChild(menuEl);
   }
@@ -62,9 +90,10 @@ async function main(): Promise<void> {
     window.__gameScreen = screen;
 
     const backBtn = document.createElement('button');
-    backBtn.textContent = '‹ תפריט';
+    backBtn.textContent = 'תפריט ›';
+    backBtn.className = 'cw-btn-secondary';
     backBtn.dataset.testid = 'back-to-menu';
-    backBtn.style.cssText = 'position:absolute; top:8px; right:8px; font-size:14px; padding:6px 14px; z-index:10;';
+    backBtn.style.cssText = 'position:absolute; bottom:14px; left:14px; padding:8px 14px; font-size:13px; z-index:10;';
     backBtn.addEventListener('click', () => showLevelSelect());
     root.appendChild(backBtn);
 

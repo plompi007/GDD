@@ -1,11 +1,12 @@
 import type * as RAPIER from '@dimforge/rapier2d-deterministic';
-import { Application, Container, Graphics, Text } from 'pixi.js';
+import { Application, Container, Graphics } from 'pixi.js';
 import { GameSession } from '../core/level/GameSession.ts';
 import type { EditorPart } from '../core/level/EditorState.ts';
 import type { LevelDef } from '../core/level/LevelSchema.ts';
 import type { PartRegistry } from '../core/parts/PartRegistry.ts';
 import { SIM } from '../core/sim/constants.ts';
 import { spriteForPart } from '../render/PartSprite.ts';
+import { ensureStylesInjected } from './styles.ts';
 
 const STATE_LABEL: Record<string, string> = {
   EDIT: 'ערוך',
@@ -26,14 +27,14 @@ export class GameScreen {
   readonly session: GameSession;
   private readonly app: Application;
   private readonly worldLayer: Container;
-  private readonly hudLabel: Text;
   private readonly overlay: HTMLDivElement;
   private readonly binEl: HTMLDivElement;
   private readonly playBtn: HTMLButtonElement;
   private readonly resetBtn: HTMLButtonElement;
+  private readonly stateBadge: HTMLSpanElement;
   private readonly remainingCounts = new Map<string, number>();
   private readonly editSprites = new Map<string, Graphics>();
-  private runtimeSprites: { sprite: Graphics; body: RAPIER.RigidBody }[] = [];
+  private runtimeSprites: { id: string; sprite: Graphics; body: RAPIER.RigidBody }[] = [];
   private nextPlacedId = 0;
   private dragGhostEl: HTMLDivElement | null = null;
   private dragPartType: string | null = null;
@@ -45,6 +46,7 @@ export class GameScreen {
     level: LevelDef,
     root: HTMLElement,
   ) {
+    ensureStylesInjected();
     this.app = app;
     this.session = new GameSession(level, registry);
     for (const entry of level.partsBin) this.remainingCounts.set(entry.partType, entry.count);
@@ -53,38 +55,53 @@ export class GameScreen {
     app.stage.addChild(this.worldLayer);
     this.fitWorld();
 
-    this.hudLabel = new Text({ text: '', style: { fill: 0xffffff, fontSize: 16 } });
-    this.hudLabel.position.set(12, 44);
-    app.stage.addChild(this.hudLabel);
-
     this.overlay = document.createElement('div');
-    this.overlay.style.cssText = 'position:absolute; inset:0; pointer-events:none; font-family:sans-serif; color:#fff;';
+    this.overlay.style.cssText = 'position:absolute; inset:0; pointer-events:none;';
     root.appendChild(this.overlay);
 
-    const goalEl = document.createElement('div');
+    const topBar = document.createElement('div');
+    topBar.className = 'cw-goal-bar cw-hud-top';
+    this.overlay.appendChild(topBar);
+
+    const titleEl = document.createElement('span');
+    titleEl.className = 'cw-hud-title';
+    titleEl.textContent = level.title;
+    topBar.appendChild(titleEl);
+
+    const goalEl = document.createElement('span');
     goalEl.textContent = level.goalText;
-    goalEl.style.cssText = 'position:absolute; top:8px; left:8px; right:8px; text-align:center; font-size:16px;';
-    this.overlay.appendChild(goalEl);
+    goalEl.style.cssText = 'flex: 1; text-align: center;';
+    topBar.appendChild(goalEl);
+
+    this.stateBadge = document.createElement('span');
+    this.stateBadge.className = 'cw-state-badge';
+    topBar.appendChild(this.stateBadge);
+
+    const bottomBar = document.createElement('div');
+    bottomBar.className = 'cw-bottom-bar';
+    bottomBar.style.pointerEvents = 'none';
+    this.overlay.appendChild(bottomBar);
 
     this.binEl = document.createElement('div');
-    this.binEl.style.cssText =
-      'position:absolute; bottom:64px; left:0; right:0; display:flex; justify-content:center; gap:8px; flex-wrap:wrap; pointer-events:auto;';
-    this.overlay.appendChild(this.binEl);
+    this.binEl.className = 'cw-bin-row';
+    this.binEl.style.pointerEvents = 'auto';
+    bottomBar.appendChild(this.binEl);
 
     const controlsEl = document.createElement('div');
-    controlsEl.style.cssText = 'position:absolute; bottom:8px; left:0; right:0; display:flex; justify-content:center; gap:8px; pointer-events:auto;';
-    this.overlay.appendChild(controlsEl);
+    controlsEl.className = 'cw-controls-row';
+    controlsEl.style.pointerEvents = 'auto';
+    bottomBar.appendChild(controlsEl);
 
     this.playBtn = document.createElement('button');
+    this.playBtn.className = 'cw-btn';
     this.playBtn.dataset.testid = 'play-pause';
-    this.playBtn.style.cssText = 'font-size:16px; padding:8px 20px;';
     this.playBtn.addEventListener('click', () => this.onPlayPauseClick());
     controlsEl.appendChild(this.playBtn);
 
     this.resetBtn = document.createElement('button');
     this.resetBtn.textContent = 'איפוס';
+    this.resetBtn.className = 'cw-btn-secondary';
     this.resetBtn.dataset.testid = 'reset';
-    this.resetBtn.style.cssText = 'font-size:16px; padding:8px 20px;';
     this.resetBtn.addEventListener('click', () => this.onResetClick());
     controlsEl.appendChild(this.resetBtn);
 
@@ -101,7 +118,6 @@ export class GameScreen {
       window.removeEventListener('resize', resizeFn);
       this.overlay.remove();
       this.worldLayer.destroy({ children: true });
-      this.hudLabel.destroy();
     };
   }
 
@@ -120,10 +136,16 @@ export class GameScreen {
     this.binEl.innerHTML = '';
     for (const [partType, count] of this.remainingCounts) {
       const btn = document.createElement('button');
-      btn.textContent = `${this.registry.get(partType).displayKey.replace('part.', '')} (${count})`;
-      btn.disabled = count <= 0 || this.session.state !== 'EDIT';
+      btn.className = 'cw-bin-item';
+      const label = document.createElement('span');
+      label.textContent = this.registry.get(partType).displayKey.replace('part.', '');
+      const countEl = document.createElement('span');
+      countEl.className = 'cw-bin-count';
+      countEl.textContent = `× ${count}`;
+      btn.append(label, countEl);
+      const disabled = count <= 0 || this.session.state !== 'EDIT';
+      if (disabled) btn.dataset.empty = 'true';
       btn.dataset.testid = `bin-${partType}`;
-      btn.style.cssText = 'font-size:14px; padding:6px 12px;';
       btn.addEventListener('pointerdown', (e) => this.startDrag(partType, e));
       this.binEl.appendChild(btn);
     }
@@ -138,7 +160,7 @@ export class GameScreen {
     const def = this.registry.get(partType);
     const sizePx =
       def.body.shape.kind === 'ball' ? def.body.shape.radius * 2 * SIM.PIXELS_PER_METER * this.worldLayer.scale.x : Math.max(def.body.shape.w, def.body.shape.h) * SIM.PIXELS_PER_METER * this.worldLayer.scale.x;
-    ghost.style.cssText = `position:fixed; width:${sizePx}px; height:${sizePx}px; margin-left:${-sizePx / 2}px; margin-top:${-sizePx / 2}px; border-radius:${def.body.shape.kind === 'ball' ? '50%' : '4px'}; background:rgba(255,255,255,0.5); pointer-events:none; z-index:1000;`;
+    ghost.style.cssText = `position:fixed; width:${sizePx}px; height:${sizePx}px; margin-left:${-sizePx / 2}px; margin-top:${-sizePx / 2}px; border-radius:${def.body.shape.kind === 'ball' ? '50%' : '4px'}; background:rgba(236,200,121,0.55); border:2px solid rgba(201,151,63,0.9); pointer-events:none; z-index:1000;`;
     document.body.appendChild(ghost);
     this.dragGhostEl = ghost;
     this.moveGhost(downEvent.clientX, downEvent.clientY);
@@ -235,12 +257,28 @@ export class GameScreen {
     for (const part of this.session.runtime.all()) {
       const sprite = spriteForPart(part.def);
       this.worldLayer.addChild(sprite);
-      this.runtimeSprites.push({ sprite, body: part.rigidBody });
+      this.runtimeSprites.push({ id: part.id, sprite, body: part.rigidBody });
     }
     this.syncRuntimeSprites();
   }
 
+  /**
+   * Parts can be freed mid-RUNNING (a fuse's charge_barrel destroying a wall,
+   * a popped balloon, ...) — LevelRuntime.remove() frees the underlying
+   * Rapier body, so touching it again after that (even just reading its
+   * translation) is a use-after-free that crashes the WASM. Drop those
+   * sprites instead of syncing them.
+   */
   private syncRuntimeSprites(): void {
+    if (!this.session.runtime) return;
+    const runtime = this.session.runtime;
+    this.runtimeSprites = this.runtimeSprites.filter(({ id, sprite }) => {
+      if (runtime.isRemoved(id)) {
+        sprite.destroy();
+        return false;
+      }
+      return true;
+    });
     for (const { sprite, body } of this.runtimeSprites) {
       const t = body.translation();
       sprite.position.set(t.x * SIM.PIXELS_PER_METER, t.y * SIM.PIXELS_PER_METER);
@@ -269,14 +307,16 @@ export class GameScreen {
   }
 
   private updateHud(): void {
-    const label = STATE_LABEL[this.session.state] ?? this.session.state;
-    this.hudLabel.text = `${this.session.level.title} — ${label}${this.session.failReason ? ` (${this.session.failReason})` : ''}`;
+    const state = this.session.state;
+    const label = STATE_LABEL[state] ?? state;
+    this.stateBadge.textContent = `${label}${this.session.failReason ? ` · ${this.session.failReason}` : ''}`;
+    this.stateBadge.className = `cw-state-badge cw-state-${state}`;
 
-    if (this.session.state === 'EDIT') this.playBtn.textContent = 'הפעל ▶';
-    else if (this.session.state === 'RUNNING') this.playBtn.textContent = 'השהה ⏸';
-    else if (this.session.state === 'PAUSED') this.playBtn.textContent = 'המשך ▶';
+    if (state === 'EDIT') this.playBtn.textContent = 'הפעל ▶';
+    else if (state === 'RUNNING') this.playBtn.textContent = 'השהה ⏸';
+    else if (state === 'PAUSED') this.playBtn.textContent = 'המשך ▶';
     else this.playBtn.textContent = 'הפעל ▶';
-    this.playBtn.disabled = this.session.state === 'SOLVED' || this.session.state === 'FAILED';
+    this.playBtn.disabled = state === 'SOLVED' || state === 'FAILED';
   }
 
   private frame(realDtSeconds: number): void {
