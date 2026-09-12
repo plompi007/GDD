@@ -1,0 +1,26 @@
+{
+  "partType": "balloon_lift",
+  "displayKey": "part.balloon_lift",
+  "category": "DYNAMIC",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 0.35 },
+    "mass": 0.15,
+    "restitution": 0.5,
+    "friction": 0.1,
+    "gravityScale": -0.35
+  },
+  "tags": ["FLAMMABLE", "POPPABLE", "WIND"],
+  "windFactor": 3.0,
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "rotationSnap": 0,
+    "flippable": false,
+    "sprite": "parts/balloon_lift.png",
+    "binIcon": "icons/balloon_lift.svg"
+  },
+  "params": {}
+}

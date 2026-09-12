@@ -1,0 +1,25 @@
+{
+  "partType": "crate_wood",
+  "displayKey": "part.crate_wood",
+  "category": "DYNAMIC",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "box", "w": 1, "h": 1 },
+    "mass": 3.0,
+    "restitution": 0.1,
+    "friction": 0.65,
+    "gravityScale": 1.0
+  },
+  "tags": ["FLAMMABLE", "DESTRUCTIBLE"],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 90,
+    "flippable": false,
+    "sprite": "parts/crate_wood.png",
+    "binIcon": "icons/crate_wood.svg"
+  },
+  "params": {}
+}

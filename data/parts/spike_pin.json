@@ -1,0 +1,23 @@
+{
+  "partType": "spike_pin",
+  "displayKey": "part.spike_pin",
+  "category": "STATIC",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 0.3, "h": 0.3 },
+    "friction": 0.4,
+    "restitution": 0.1
+  },
+  "tags": ["SHARP"],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 90,
+    "flippable": false,
+    "sprite": "parts/spike_pin.png",
+    "binIcon": "icons/spike_pin.svg"
+  },
+  "params": {}
+}

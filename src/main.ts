@@ -4,6 +4,40 @@ import { buildBody } from './core/sim/BodyFactory.ts';
 import { SIM } from './core/sim/constants.ts';
 import { FixedStepLoop } from './core/sim/FixedStepLoop.ts';
 import { SimWorld } from './core/sim/SimWorld.ts';
+import type { PartDef } from './core/parts/PartDef.ts';
+import { loadPartRegistry } from './core/parts/PartRegistry.ts';
+
+const CATEGORY_COLOR: Record<PartDef['category'], number> = {
+  STATIC: 0xc9973f,
+  DYNAMIC: 0xd9584b,
+  MECHANISM: 0xfa7a13,
+  POWER: 0xfa7a13,
+  PNEUMATIC: 0x8fb8de,
+  THERMAL: 0xd9584b,
+  LIGHT: 0xf3e39a,
+  ACTUATOR: 0xfa7a13,
+  GOAL: 0x3fa77a,
+};
+
+/** Draws a shape sized straight from the part's own BodySpec — no hand-authored geometry to keep in sync. */
+function spriteForPart(def: PartDef): Graphics {
+  const g = new Graphics();
+  const color = CATEGORY_COLOR[def.category];
+  if (def.body.shape.kind === 'ball') {
+    g.circle(0, 0, def.body.shape.radius * SIM.PIXELS_PER_METER).fill(color);
+  } else {
+    const w = def.body.shape.w * SIM.PIXELS_PER_METER;
+    const h = def.body.shape.h * SIM.PIXELS_PER_METER;
+    g.rect(-w / 2, -h / 2, w, h).fill(color);
+  }
+  return g;
+}
+
+function syncSprite(sprite: Graphics, body: RAPIER.RigidBody): void {
+  const t = body.translation();
+  sprite.position.set(t.x * SIM.PIXELS_PER_METER, t.y * SIM.PIXELS_PER_METER);
+  sprite.rotation = body.rotation();
+}
 
 // PixiJS's async Application.init() never resolves when awaited at module top
 // level in a Vite production build (github.com/pixijs/pixijs/issues/10456).
@@ -13,50 +47,47 @@ async function main(): Promise<void> {
   await app.init({ background: '#2a2420', resizeTo: window, preference: 'webgl' });
   document.getElementById('app')!.appendChild(app.canvas);
 
+  const parts = loadPartRegistry();
   const simWorld = new SimWorld();
 
-  // Frame a small demo scene against the actual screen size (the full
-  // WORLD_WIDTH/HEIGHT game-world constants apply once levels exist, from M2 on).
+  // Temporary hard-coded scene (M2 acceptance: "balls roll on planks"). The
+  // real level format arrives in M3's LevelLoader.
   const screenWidthM = app.screen.width / SIM.PIXELS_PER_METER;
   const screenHeightM = app.screen.height / SIM.PIXELS_PER_METER;
-  const floorHalfWidthM = screenWidthM / 2;
-  const floorYM = screenHeightM - 2;
+  const centerXM = screenWidthM / 2;
 
-  const { rigidBody: floorBody } = buildBody(
-    simWorld.rapier,
-    { type: 'fixed', shape: { kind: 'box', w: floorHalfWidthM * 2, h: 1 } },
-    { x: screenWidthM / 2, y: floorYM },
-  );
+  interface Placed {
+    def: PartDef;
+    body: RAPIER.RigidBody;
+    sprite: Graphics;
+  }
+  const placed: Placed[] = [];
 
-  const { rigidBody: boxBody } = buildBody(
-    simWorld.rapier,
-    { type: 'dynamic', shape: { kind: 'box', w: 1, h: 1 }, mass: 1, restitution: 0.3, friction: 0.5 },
-    { x: screenWidthM / 2, y: 2 },
-  );
-
-  const floorSprite = new Graphics()
-    .rect(-floorHalfWidthM * SIM.PIXELS_PER_METER, -0.5 * SIM.PIXELS_PER_METER, floorHalfWidthM * 2 * SIM.PIXELS_PER_METER, 1 * SIM.PIXELS_PER_METER)
-    .fill(0xc9973f);
-  app.stage.addChild(floorSprite);
-
-  const boxSprite = new Graphics()
-    .rect(-0.5 * SIM.PIXELS_PER_METER, -0.5 * SIM.PIXELS_PER_METER, 1 * SIM.PIXELS_PER_METER, 1 * SIM.PIXELS_PER_METER)
-    .fill(0xd9584b);
-  app.stage.addChild(boxSprite);
-
-  function syncSprite(sprite: Graphics, body: RAPIER.RigidBody): void {
-    const t = body.translation();
-    sprite.position.set(t.x * SIM.PIXELS_PER_METER, t.y * SIM.PIXELS_PER_METER);
-    sprite.rotation = body.rotation();
+  function place(partType: string, x: number, y: number, rotationDeg = 0): Placed {
+    const def = parts.get(partType);
+    const { rigidBody } = buildBody(simWorld.rapier, def.body, { x, y, rotation: (rotationDeg * Math.PI) / 180 });
+    const sprite = spriteForPart(def);
+    app.stage.addChild(sprite);
+    syncSprite(sprite, rigidBody);
+    const entry: Placed = { def, body: rigidBody, sprite };
+    placed.push(entry);
+    return entry;
   }
 
-  syncSprite(floorSprite, floorBody);
-  syncSprite(boxSprite, boxBody);
+  place('floor_ground', centerXM, screenHeightM - 1);
+  place('plank_wood', centerXM - 3, 3, 20);
+  place('plank_wood', centerXM + 3, 6, -20);
+  place('ball_wood', centerXM - 3, 1.5);
+  place('ball_rubber', centerXM + 3, 4.5);
+
+  const dynamicBodies = placed.filter((p) => p.def.body.type === 'dynamic');
 
   const loop = new FixedStepLoop({
     isRunning: () => true,
     onTick: () => simWorld.step(),
-    onRender: () => syncSprite(boxSprite, boxBody),
+    onRender: () => {
+      for (const p of dynamicBodies) syncSprite(p.sprite, p.body);
+    },
   });
 
   app.ticker.add((ticker) => loop.frame(ticker.deltaMS / 1000));

@@ -1,0 +1,23 @@
+{
+  "partType": "beam_steel",
+  "displayKey": "part.beam_steel",
+  "category": "STATIC",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 4, "h": 0.3 },
+    "friction": 0.25,
+    "restitution": 0.35
+  },
+  "tags": ["METALLIC"],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 90,
+    "flippable": false,
+    "sprite": "parts/beam_steel.png",
+    "binIcon": "icons/beam_steel.svg"
+  },
+  "params": {}
+}

@@ -1,0 +1,26 @@
+{
+  "partType": "drifter_orb",
+  "displayKey": "part.drifter_orb",
+  "category": "DYNAMIC",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 0.35 },
+    "mass": 1.0,
+    "restitution": 0.9,
+    "friction": 0.02,
+    "gravityScale": 0.0,
+    "linearDamping": 0.15
+  },
+  "tags": [],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "rotationSnap": 0,
+    "flippable": false,
+    "sprite": "parts/drifter_orb.png",
+    "binIcon": "icons/drifter_orb.svg"
+  },
+  "params": {}
+}
