@@ -1,42 +1,13 @@
-import * as RAPIER from '@dimforge/rapier2d-deterministic';
-import { Application, Container, Graphics, Text } from 'pixi.js';
-import type { PartDef } from './core/parts/PartDef.ts';
+import { Application } from 'pixi.js';
+import { loadAllLevels } from './core/level/LevelCatalog.ts';
 import { loadPartRegistry } from './core/parts/PartRegistry.ts';
-import { SIM } from './core/sim/constants.ts';
-import { loadLevelById } from './core/level/LevelCatalog.ts';
-import { GameSession } from './core/level/GameSession.ts';
+import { GameScreen } from './ui/GameScreen.ts';
 
-const CATEGORY_COLOR: Record<PartDef['category'], number> = {
-  STATIC: 0xc9973f,
-  DYNAMIC: 0xd9584b,
-  MECHANISM: 0xfa7a13,
-  POWER: 0xfa7a13,
-  PNEUMATIC: 0x8fb8de,
-  THERMAL: 0xd9584b,
-  LIGHT: 0xf3e39a,
-  ACTUATOR: 0xfa7a13,
-  GOAL: 0x3fa77a,
-};
-
-/** Draws a shape sized straight from the part's own BodySpec — no hand-authored geometry to keep in sync. */
-function spriteForPart(def: PartDef): Graphics {
-  const g = new Graphics();
-  const color = CATEGORY_COLOR[def.category];
-  const alpha = def.body.isSensor ? 0.35 : 1;
-  if (def.body.shape.kind === 'ball') {
-    g.circle(0, 0, def.body.shape.radius * SIM.PIXELS_PER_METER).fill({ color, alpha });
-  } else {
-    const w = def.body.shape.w * SIM.PIXELS_PER_METER;
-    const h = def.body.shape.h * SIM.PIXELS_PER_METER;
-    g.rect(-w / 2, -h / 2, w, h).fill({ color, alpha });
+declare global {
+  interface Window {
+    /** Test-only hook: the currently mounted game screen, if any. */
+    __gameScreen?: GameScreen;
   }
-  return g;
-}
-
-function syncSprite(sprite: Graphics, body: RAPIER.RigidBody): void {
-  const t = body.translation();
-  sprite.position.set(t.x * SIM.PIXELS_PER_METER, t.y * SIM.PIXELS_PER_METER);
-  sprite.rotation = body.rotation();
 }
 
 // PixiJS's async Application.init() never resolves when awaited at module top
@@ -45,55 +16,67 @@ function syncSprite(sprite: Graphics, body: RAPIER.RigidBody): void {
 async function main(): Promise<void> {
   const app = new Application();
   await app.init({ background: '#2a2420', resizeTo: window, preference: 'webgl' });
-  document.getElementById('app')!.appendChild(app.canvas);
+
+  const root = document.getElementById('app')!;
+  root.style.position = 'relative';
+  root.appendChild(app.canvas);
 
   const registry = loadPartRegistry();
-  const level = loadLevelById('lvl_a01_free_fall');
-  const session = new GameSession(level, registry);
+  const levels = loadAllLevels().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-  const worldLayer = new Container();
-  app.stage.addChild(worldLayer);
-  // Fit the level's fixed WORLD_WIDTH/HEIGHT grid to whatever the screen is (GDD §3.7 CONTAIN fit).
-  const fitScale = Math.min(app.screen.width / level.world.width, app.screen.height / level.world.height);
-  worldLayer.scale.set(fitScale);
+  let currentScreen: GameScreen | null = null;
+  let menuEl: HTMLDivElement | null = null;
 
-  const label = new Text({
-    text: '',
-    style: { fill: 0xffffff, fontSize: 18 },
-  });
-  label.position.set(12, 12);
-  app.stage.addChild(label);
+  function showLevelSelect(): void {
+    currentScreen?.destroy();
+    currentScreen = null;
 
-  let sprites: { sprite: Graphics; body: RAPIER.RigidBody }[] = [];
+    menuEl = document.createElement('div');
+    menuEl.style.cssText =
+      'position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:#2a2420; color:#fff; font-family:sans-serif; overflow:auto; padding:24px;';
 
-  function rebuildSpritesFromRuntime(): void {
-    worldLayer.removeChildren();
-    sprites = [];
-    if (!session.runtime) return;
-    for (const part of session.runtime.all()) {
-      const sprite = spriteForPart(part.def);
-      worldLayer.addChild(sprite);
-      syncSprite(sprite, part.rigidBody);
-      sprites.push({ sprite, body: part.rigidBody });
+    const title = document.createElement('h1');
+    title.textContent = 'ChainWorks';
+    title.style.marginBottom = '8px';
+    menuEl.appendChild(title);
+
+    for (const level of levels) {
+      const btn = document.createElement('button');
+      btn.textContent = `${level.title}${level.order ? ` (${level.order})` : ''}`;
+      btn.dataset.levelId = level.id;
+      btn.style.cssText = 'font-size:16px; padding:10px 28px; min-width:220px;';
+      btn.addEventListener('click', () => showLevel(level.id));
+      menuEl?.appendChild(btn);
     }
+    root.appendChild(menuEl);
   }
 
-  session.play();
-  rebuildSpritesFromRuntime();
+  function showLevel(id: string): void {
+    menuEl?.remove();
+    menuEl = null;
+    currentScreen?.destroy();
+    const level = levels.find((l) => l.id === id);
+    if (!level) return;
+    const screen = new GameScreen(app, registry, level, root);
+    currentScreen = screen;
+    window.__gameScreen = screen;
 
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'r') {
-      session.reset();
-      session.play();
-      rebuildSpritesFromRuntime();
-    }
-  });
+    const backBtn = document.createElement('button');
+    backBtn.textContent = '‹ תפריט';
+    backBtn.dataset.testid = 'back-to-menu';
+    backBtn.style.cssText = 'position:absolute; top:8px; right:8px; font-size:14px; padding:6px 14px; z-index:10;';
+    backBtn.addEventListener('click', () => showLevelSelect());
+    root.appendChild(backBtn);
 
-  app.ticker.add((ticker) => {
-    session.frame(ticker.deltaMS / 1000);
-    for (const s of sprites) syncSprite(s.sprite, s.body);
-    label.text = `${level.title} — ${session.state}${session.failReason ? ` (${session.failReason})` : ''} — press R to reset`;
-  });
+    const originalDestroy = screen.destroy.bind(screen);
+    screen.destroy = () => {
+      backBtn.remove();
+      if (window.__gameScreen === screen) delete window.__gameScreen;
+      originalDestroy();
+    };
+  }
+
+  showLevelSelect();
 }
 
 void main();

@@ -1,5 +1,6 @@
 import './tests/determinism.ts';
 import './tests/level-a01.ts';
+import './tests/level-a02-bridge.ts';
 import './tests/level-a03-pulley.ts';
 import './tests/level-a05-wind.ts';
 import './tests/level-a07-gear-train.ts';

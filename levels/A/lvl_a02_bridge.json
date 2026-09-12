@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a02_bridge",
+  "title": "הגשר החסר",
+  "chapter": "A_FOUNDATIONS",
+  "order": 2,
+  "difficulty": 1,
+  "goalText": "השלם את המסלול כדי שהכדור יגיע לאזור.",
+  "hints": ["חסר קרש אחד כדי לגשר על הפער.", "הצמד את הקרש בהמשך השיפוע."],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20, "theme": "brass_timber" },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 800, "y": 1180 },
+    { "id": "ledge_left", "partType": "plank_wood", "x": 350, "y": 700, "rotation": 8 },
+    { "id": "ledge_right", "partType": "plank_wood", "x": 514, "y": 723, "rotation": 8 },
+    { "id": "goal", "partType": "zone_goal", "x": 561, "y": 735 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": 305, "y": 690, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [
+    { "partType": "plank_wood", "count": 1 }
+  ],
+  "connections": [],
+  "winConditions": [
+    { "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal", "holdMs": 0 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT", "holdMs": 0 },
+    { "type": "TIMEOUT", "holdMs": 0 }
+  ],
+  "solutions": [
+    {
+      "label": "קרש גישור",
+      "parts": [
+        { "id": "s_bridge", "partType": "plank_wood", "x": 432, "y": 711, "rotation": 8 }
+      ],
+      "connections": []
+    }
+  ]
+}
