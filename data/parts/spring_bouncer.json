@@ -6,7 +6,7 @@
   "body": {
     "type": "fixed",
     "shape": { "kind": "box", "w": 1.0, "h": 0.5 },
-    "restitution": 1.15,
+    "restitution": 2.0,
     "friction": 0.1
   },
   "tags": ["BOUNCY"],

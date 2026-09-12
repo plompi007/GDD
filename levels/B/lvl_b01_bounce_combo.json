@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_b01_bounce_combo",
+  "title": "קפיצה ורוח",
+  "chapter": "B_COMBOS",
+  "order": 9,
+  "difficulty": 2,
+  "goalText": "הקפיץ והרוח כבר יזרקו את הכדור קדימה — בנה לו גשר מעל הפער אל האזור.",
+  "hints": [
+    "הכדור נופל על הקפיץ מעצמו, והרוח דוחפת אותו הצידה אחרי הקפיצה.",
+    "אחרי הנחיתה חסר גשר קטן כדי להגיע לאזור."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 40, "theme": "brass_timber" },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 800, "y": 1180 },
+    { "id": "spring", "partType": "spring_bouncer", "x": 320, "y": 1155, "rotation": 0 },
+    { "id": "outlet", "partType": "outlet_power", "x": 250, "y": 700 },
+    { "id": "fan", "partType": "fan_blower", "x": 320, "y": 700, "rotation": 0, "params": { "power": 2, "range": 6 } },
+    { "id": "landing_a", "partType": "plank_wood", "x": 350, "y": 1155, "rotation": 0 },
+    { "id": "landing_b", "partType": "plank_wood", "x": 440, "y": 1155, "rotation": 0 },
+    { "id": "landing_c", "partType": "plank_wood", "x": 560, "y": 1155, "rotation": 0 },
+    { "id": "goal", "partType": "zone_goal", "x": 560, "y": 1130 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_baseball", "x": 320, "y": 760, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [{ "partType": "plank_wood", "count": 1 }],
+  "connections": [{ "id": "wire1", "kind": "WIRE", "from": { "partId": "outlet" }, "to": { "partId": "fan" } }],
+  "winConditions": [{ "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal", "holdMs": 0 }],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT", "holdMs": 0 },
+    { "type": "TIMEOUT", "holdMs": 0 }
+  ],
+  "solutions": [
+    { "label": "גשר ישר", "parts": [{ "id": "s_bridge", "partType": "plank_wood", "x": 500, "y": 1155, "rotation": 0 }], "connections": [] }
+  ]
+}

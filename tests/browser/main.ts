@@ -7,6 +7,7 @@ import './tests/level-a03-pulley.ts';
 import './tests/level-a05-wind.ts';
 import './tests/level-a07-gear-train.ts';
 import './tests/level-a08-fuse.ts';
+import './tests/level-b01-bounce-combo.ts';
 import { runAll } from './registry.ts';
 
 declare global {
