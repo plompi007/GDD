@@ -13,35 +13,37 @@ export function ensureStylesInjected(): void {
   style.textContent = `
     .cw-btn {
       font-family: ${THEME.font.display};
-      font-weight: 700;
-      font-size: 15px;
-      padding: 10px 22px;
-      border-radius: 10px;
-      border: 1px solid ${css.brassDeep};
-      background: linear-gradient(180deg, ${css.brassBright}, ${css.brass} 55%, ${css.brassDeep});
-      color: ${css.walnutDeep};
-      box-shadow: 0 2px 0 ${css.brassDeep}, 0 3px 8px rgba(0,0,0,0.35);
+      font-weight: 800;
+      font-size: 16px;
+      padding: 12px 26px;
+      border-radius: 14px;
+      border: none;
+      background: ${css.success};
+      color: #ffffff;
+      box-shadow: 0 3px 0 ${css.successDark}, 0 6px 14px rgba(31,156,144,0.35);
       cursor: pointer;
       transition: transform 0.08s ease, filter 0.15s ease;
       white-space: nowrap;
     }
-    .cw-btn:hover:not(:disabled) { filter: brightness(1.08); }
-    .cw-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0 ${css.brassDeep}, 0 1px 4px rgba(0,0,0,0.35); }
-    .cw-btn:disabled { opacity: 0.45; cursor: default; filter: grayscale(0.4); }
+    .cw-btn:hover:not(:disabled) { filter: brightness(1.06); }
+    .cw-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 ${css.successDark}, 0 2px 6px rgba(31,156,144,0.35); }
+    .cw-btn:disabled { opacity: 0.4; cursor: default; filter: grayscale(0.3); box-shadow: none; }
 
     .cw-btn-secondary {
       font-family: ${THEME.font.display};
-      font-weight: 600;
+      font-weight: 700;
       font-size: 14px;
-      padding: 9px 18px;
-      border-radius: 10px;
-      border: 1px solid rgba(217,197,160,0.35);
-      background: rgba(42,36,32,0.55);
-      color: ${css.oakLight};
+      padding: 10px 20px;
+      border-radius: 14px;
+      border: 2px solid ${css.ink}22;
+      background: #ffffff;
+      color: ${css.ink};
       cursor: pointer;
-      transition: background 0.15s ease;
+      box-shadow: 0 2px 6px rgba(36,33,29,0.12);
+      transition: transform 0.08s ease, background 0.15s ease;
     }
-    .cw-btn-secondary:hover { background: rgba(217,197,160,0.16); }
+    .cw-btn-secondary:hover { background: ${css.paperMid}; }
+    .cw-btn-secondary:active { transform: translateY(2px); }
 
     .cw-bin-item {
       display: flex;
@@ -50,94 +52,95 @@ export function ensureStylesInjected(): void {
       gap: 2px;
       font-family: ${THEME.font.body};
       font-size: 12px;
-      font-weight: 500;
-      padding: 8px 14px 6px;
-      border-radius: 12px;
-      border: 1px solid ${css.brassDeep};
-      background: linear-gradient(180deg, rgba(217,197,160,0.95), rgba(185,154,107,0.95));
-      color: ${css.walnutDeep};
+      font-weight: 700;
+      padding: 9px 16px 7px;
+      border-radius: 16px;
+      border: 2px solid ${css.ink};
+      background: #ffffff;
+      color: ${css.ink};
       cursor: grab;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      box-shadow: 0 3px 0 ${css.ink}, 0 5px 10px rgba(36,33,29,0.25);
       touch-action: none;
       user-select: none;
     }
-    .cw-bin-item:active { cursor: grabbing; }
-    .cw-bin-item:disabled, .cw-bin-item[data-empty="true"] { opacity: 0.35; cursor: default; }
+    .cw-bin-item:active { cursor: grabbing; transform: translateY(2px); box-shadow: 0 1px 0 ${css.ink}; }
+    .cw-bin-item[data-empty="true"] { opacity: 0.35; cursor: default; box-shadow: none; border-color: ${css.ink}55; }
     .cw-bin-count {
       font-family: ${THEME.font.mono};
       font-weight: 700;
       font-size: 11px;
-      color: ${css.brassDeep};
+      color: ${css.successDark};
     }
 
     .cw-goal-bar {
       font-family: ${THEME.font.body};
       font-size: 15px;
-      font-weight: 500;
-      color: ${css.oakLight};
-      background: linear-gradient(180deg, rgba(28,24,19,0.92), rgba(28,24,19,0.55));
-      border-bottom: 2px solid ${css.brass};
+      font-weight: 600;
+      color: ${css.ink};
+      background: #ffffffee;
+      border-bottom: 3px solid ${css.ink};
       padding: 10px 16px calc(10px + env(safe-area-inset-top, 0px));
       text-align: center;
     }
 
     .cw-state-badge {
       font-family: ${THEME.font.display};
-      font-weight: 700;
+      font-weight: 800;
       font-size: 13px;
-      padding: 4px 12px;
+      padding: 5px 14px;
       border-radius: 999px;
       display: inline-block;
+      color: #ffffff;
     }
-    .cw-state-EDIT { background: rgba(154,163,171,0.25); color: ${css.oakLight}; }
-    .cw-state-RUNNING { background: rgba(79,157,167,0.3); color: #bfe7ec; }
-    .cw-state-PAUSED { background: rgba(201,151,63,0.3); color: ${css.brassBright}; }
-    .cw-state-SOLVED { background: rgba(79,174,127,0.3); color: ${css.successBright}; }
-    .cw-state-FAILED { background: rgba(217,88,75,0.3); color: ${css.dangerBright}; }
+    .cw-state-EDIT { background: ${css.inkSoft}; }
+    .cw-state-RUNNING { background: ${css.pneumatic}; }
+    .cw-state-PAUSED { background: ${css.brassDark}; }
+    .cw-state-SOLVED { background: ${css.success}; }
+    .cw-state-FAILED { background: ${css.dangerDark}; }
 
     .cw-hud-top {
       position: absolute; top: 0; left: 0; right: 0;
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
     }
-    .cw-hud-title { font-family: ${THEME.font.display}; font-weight: 700; }
+    .cw-hud-title { font-family: ${THEME.font.display}; font-weight: 800; }
 
     .cw-bottom-bar {
       position: absolute; bottom: 0; left: 0; right: 0;
       padding-bottom: env(safe-area-inset-bottom, 0px);
-      background: linear-gradient(0deg, rgba(28,24,19,0.92), rgba(28,24,19,0.0));
+      background: linear-gradient(0deg, ${css.paperLight} 55%, transparent);
     }
     .cw-bin-row {
       display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
-      padding: 14px 12px 10px;
+      padding: 16px 12px 10px;
     }
     .cw-controls-row {
       display: flex; justify-content: center; gap: 12px;
-      padding: 0 12px 14px;
+      padding: 0 12px 16px;
     }
 
     .cw-menu {
       position: absolute; inset: 0; overflow: auto;
       background:
-        radial-gradient(rgba(201,151,63,0.10) 1.5px, transparent 1.5px) 0 0/28px 28px,
-        linear-gradient(160deg, ${css.walnutDark}, ${css.walnutDeep});
+        radial-gradient(${css.brass}22 2px, transparent 2px) 0 0/30px 30px,
+        linear-gradient(160deg, ${css.paperLight}, ${css.paperMid});
       display: flex; flex-direction: column; align-items: center;
       padding: 48px 20px;
     }
     .cw-wordmark {
       font-family: ${THEME.font.display};
       font-weight: 800;
-      font-size: clamp(32px, 8vw, 52px);
-      color: ${css.brassBright};
-      text-shadow: 0 2px 0 ${css.brassDeep}, 0 6px 18px rgba(0,0,0,0.5);
-      letter-spacing: 0.5px;
+      font-size: clamp(34px, 8vw, 54px);
+      color: ${css.ink};
       margin: 0;
+      letter-spacing: 0.5px;
     }
+    .cw-wordmark span { color: ${css.success}; }
     .cw-tagline {
       font-family: ${THEME.font.body};
-      color: ${css.oakLight};
-      opacity: 0.75;
+      color: ${css.inkSoft};
       margin: 6px 0 36px;
       font-size: 14px;
+      font-weight: 600;
     }
     .cw-level-grid {
       display: grid;
@@ -149,29 +152,28 @@ export function ensureStylesInjected(): void {
     .cw-level-card {
       font-family: ${THEME.font.body};
       text-align: right;
-      border-radius: 14px;
-      border: 1px solid rgba(201,151,63,0.4);
-      background: linear-gradient(160deg, rgba(217,197,160,0.08), rgba(217,197,160,0.02));
-      color: ${css.oakLight};
+      border-radius: 18px;
+      border: 3px solid ${css.ink};
+      background: #ffffff;
+      color: ${css.ink};
       padding: 16px 18px;
       cursor: pointer;
-      transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+      box-shadow: 0 4px 0 ${css.ink};
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
     }
-    .cw-level-card:hover {
-      transform: translateY(-3px);
-      border-color: ${css.brass};
-      background: linear-gradient(160deg, rgba(217,197,160,0.16), rgba(217,197,160,0.04));
-    }
+    .cw-level-card:hover { transform: translateY(-2px); }
+    .cw-level-card:active { transform: translateY(3px); box-shadow: 0 1px 0 ${css.ink}; }
     .cw-level-order {
       font-family: ${THEME.font.mono};
       font-size: 12px;
-      color: ${css.brassBright};
+      font-weight: 700;
+      color: ${css.successDark};
       display: block;
       margin-bottom: 4px;
     }
     .cw-level-title {
       font-family: ${THEME.font.display};
-      font-weight: 700;
+      font-weight: 800;
       font-size: 18px;
       display: block;
     }

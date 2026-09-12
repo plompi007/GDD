@@ -3,6 +3,7 @@ import { loadAllLevels } from './core/level/LevelCatalog.ts';
 import { loadPartRegistry } from './core/parts/PartRegistry.ts';
 import { GameScreen } from './ui/GameScreen.ts';
 import { ensureStylesInjected } from './ui/styles.ts';
+import { THEME } from './render/theme.ts';
 
 declare global {
   interface Window {
@@ -24,7 +25,7 @@ const CHAPTER_LABEL: Record<string, string> = {
 async function main(): Promise<void> {
   ensureStylesInjected();
   const app = new Application();
-  await app.init({ background: '#2a2420', resizeTo: window, preference: 'webgl' });
+  await app.init({ background: THEME.color.playfield, resizeTo: window, preference: 'webgl' });
 
   const root = document.getElementById('app')!;
   root.style.position = 'relative';
@@ -45,7 +46,7 @@ async function main(): Promise<void> {
 
     const wordmark = document.createElement('h1');
     wordmark.className = 'cw-wordmark';
-    wordmark.textContent = 'ChainWorks';
+    wordmark.append('Chain', Object.assign(document.createElement('span'), { textContent: 'Works' }));
     menuEl.appendChild(wordmark);
 
     const tagline = document.createElement('p');
