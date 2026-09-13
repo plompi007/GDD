@@ -2,13 +2,15 @@
 
 מסמך מפרט פיתוח מלא — משחק פאזל פיזיקלי מבוסס תגובת שרשרת
 
-**גרסה:** 1.1 | **תאריך:** ספטמבר 2026
+**גרסה:** 1.2 | **תאריך:** ספטמבר 2026
 **קהל היעד של המסמך:** סוכן קוד (Claude Code) + המפתח
-**פלטפורמות יעד:** iOS 15+, Android 9+ (וכבונוס: Web/PWA מאותו קוד)
+**פלטפורמות יעד:** Windows/Mac/Linux קודם (כמו OpenTIM); iOS/Android/Web הם שלב עתידי נפרד — ראה סעיף 7.5
 
 > **הערה משפטית מקדימה:** המסמך הזה מנתח מכניקות משחק (שאינן מוגנות בזכויות יוצרים) ומגדיר יצירה מקורית חדשה. אין להשתמש בשם, בגרפיקה, בצלילים, בשמות הדמויות או בפריסות השלבים של אף משחק קיים. ראה סעיף 4.
 
 > **מה חדש בגרסה 1.1:** (א) חיזוק מפורש של עקרון "**מקסימום נאמנות מכנית/חווייתית ל-TIM, מינימום חפיפה משפטית**" — סעיף 1.1 ו-4.1. (ב) זהות חזותית חדשה — כיוון אמנותי פרימיום ברמת 2026, מחליף את "Timber & Brass" כהמלצה ראשית (הכיוונים הקודמים נשמרו כחלופות מתועדות) — סעיף 4.3. (ג) שפת תנועה, Juice ומערכת עיצוב (design tokens) ברמת גימור של משחק מודרני — סעיף 3.9 החדש.
+
+> **מה חדש בגרסה 1.2 — פיבוט סטאק ל-Rust:** לאחר סקירה ישירה של [OpenTIM](https://github.com/mrfixit2001/OpenTIM) (רה-implementation קוד-פתוח, GPL-3.0, של The Even More! Incredible Machine), הוחלט לעבור מ-TypeScript/Pixi/Capacitor ל-**Rust + nannou + rapier2d, דסקטופ-קודם** — מראה ארכיטקטורת המודולים של OpenTIM עצמה (`part.rs`, `level_file_format.rs`, `atmosphere.rs`) קרובה מאוד למה שהמסמך הזה כבר ביקש (חלוקה ל-parts/level/sim), ורספייר הוא ממילא crate-Rust מקורי — הבינדינגים ל-JS/WASM שהיו בתכנון v1.1 היו שכבת עטיפה מיותרת. **חשוב: זו השראה ארכיטקטונית בלבד — אין תלות או fork בקוד ה-GPL-3.0 של OpenTIM עצמו**, כדי ש-ChainWorks יישאר קניין רוחני עצמאי (ראה §2.1). ראה עדכוני §2.1, §5.5, §7 להרחבה. סעיפים 1, 3, 4 (מכניקה, UX/זהות חזותית, משפטי) נשארים תקפים במלואם — הם בלתי תלויים בשפת המימוש.
 
 ---
 
@@ -16,14 +18,15 @@
 
 | החלטה | הבחירה | למה |
 |---|---|---|
-| סטאק | TypeScript + Rapier2D (`@dimforge/rapier2d-deterministic`) + PixiJS v8 + React (UI shell) + Capacitor 6 (אריזה ל-Android/iOS) | דטרמיניזם מובטח, חזק מאוד ב-TS, אפשר לבדוק כל איטרציה בדפדפן בנייד תוך שניות לפני שמרכיבים build |
-| מנוע פיזיקה | Rapier2D (WASM) | היחיד עם determinism מובטח cross-platform + snapshot/restore מובנה. קריטי לפאזל שבו פתרון חייב להיות ניתן לשחזור |
-| ארכיטקטורת ליבה | סימולציה דו-שכבתית: שכבת גופים קשיחים (Rapier) + שכבת גרף אנרגיה לוגי מעליה | זה הסוד של הז'אנר. חבלים, גלגלי שיניים, חשמל וחום אינם פיזיקה קשיחה — הם רשת סיגנלים. ניסיון לסמלץ חבל כשרשרת גופים = חוסר יציבות ובאגים אינסופיים |
+| סטאק | **Rust + `nannou` 0.19 (חלון/רינדור) + `rapier2d` (פיזיקה, `enhanced-determinism`) + `serde`/`serde_json`** | דטרמיניזם מובטח מהקופסה (rapier2d הוא Rust מקורי — אין שכבת WASM/JS-bindings), ארכיטקטורה שמראה במדויק את OpenTIM (`part.rs`, `level_file_format.rs`, `atmosphere.rs`) בלי תלות בקוד ה-GPL-3.0 שלהם |
+| מנוע פיזיקה | `rapier2d` (native Rust, feature `enhanced-determinism`) | דטרמיניזם cross-platform מובטח + snapshot/restore מובנה, בלי overhead של WASM. קריטי לפאזל שבו פתרון חייב להיות ניתן לשחזור |
+| ארכיטקטורת ליבה | סימולציה דו-שכבתית: שכבת גופים קשיחים (rapier2d) + שכבת גרף אנרגיה לוגי מעליה | זה הסוד של הז'אנר. חבלים, גלגלי שיניים, חשמל וחום אינם פיזיקה קשיחה — הם רשת סיגנלים. ניסיון לסמלץ חבל כשרשרת גופים = חוסר יציבות ובאגים אינסופיים |
 | Timestep | קבוע 1/120s, accumulator, מקסימום 4 צעדים לפריים | דטרמיניזם + יציבות מפרקים |
-| נתוני שלבים | JSON חיצוני + JSON Schema ולידציית Zod | שלבים ניתנים לעריכה בלי לגעת בקוד; Claude Code יכול לייצר שלבים כ-data |
-| **זהות חזותית (חדש ב-1.1)** | **Prism Foundry — "מעבדה קינטית" פרימיום, וקטור שטוח + עומק אור רך, קידוד צבע לפי סוג אנרגיה** | נראה כמו משחק 2D מקורי שיצא ב-2026 — לא נוסטלגי, לא "משחק אינדי בסיסי". ניטרלי משפטית לחלוטין (אינו מבוסס על שום נכס קיים) |
+| נתוני שלבים | JSON חיצוני + JSON Schema + `serde` (deserialize + ולידציה ידנית/`jsonschema` crate) | שלבים ניתנים לעריכה בלי לגעת בקוד; Claude Code יכול לייצר שלבים כ-data |
+| **זהות חזותית (v1.1)** | **Prism Foundry — "מעבדה קינטית" פרימיום, וקטור שטוח + עומק אור רך, קידוד צבע לפי סוג אנרגיה** | נראה כמו משחק 2D מקורי שיצא ב-2026 — לא נוסטלגי, לא "משחק אינדי בסיסי". ניטרלי משפטית לחלוטין (אינו מבוסס על שום נכס קיים) |
+| **פלטפורמה (v1.2)** | **דסקטופ קודם (Windows/Mac/Linux), כמו OpenTIM** | `nannou` לא תומך במובייל. עדיפות לזמן-איטרציה מהיר (`cargo run` מקומי) על פני יעד מובייל מיידי. ניוד ל-App Store הוא שלב 2 נפרד — ראה §7.5 |
 
-**חלופה** אם רוצים נייטיב מלא מהיום הראשון: Flutter + Flame + `forge2d`. תוצאה מצוינת, אבל מאבדים את לולאת הבדיקה המהירה בדפדפן ואת הדטרמיניזם המובטח חוצה-פלטפורמות.
+**חלופה** שנשקלה ונדחתה: הישענות ישירה על ה-crate של OpenTIM עצמו. **נפסלה** — OpenTIM הוא GPL-3.0, ותלות/fork בו הייתה מחייבת את ChainWorks לצאת גם הוא GPL-3.0 (קוד פתוח לגמרי, בלי אפשרות למוצר סגור/בתשלום). הפתרון: מראים את הצורה הארכיטקטונית, כותבים קוד מקורי. ראה §2.1.
 
 ---
 
@@ -178,7 +181,7 @@ export enum EnergyType {
 
 ### 1.4 מטריצת אינטראקציות (Interaction Matrix)
 
-הכלל: מקור → יעד ⇒ תוצאה. זו הטבלה שהסוכן צריך לממש ב-`InteractionRules.ts`.
+הכלל: מקור → יעד ⇒ תוצאה. זו הטבלה שהסוכן צריך לממש ב-`part.rs` (או מודול ייעודי `interaction_rules.rs`).
 
 #### 1.4.1 אינטראקציות לפי טיפוס אנרגיה
 
@@ -244,34 +247,40 @@ for field in activeFields:
 
 ## 2. מנוע המשחק והפיזיקה (Physics & Logic Blueprint)
 
-### 2.1 בחירת מנוע — נימוק
+### 2.1 בחירת מנוע — נימוק (מעודכן v1.2)
 
 | מנוע | דטרמיניזם חוצה-פלטפורמות | יציבות מפרקים | ביצועים | הכרעה |
 |---|---|---|---|---|
-| **Rapier2D** | ✅ מובטח (build `-deterministic`) + snapshot/MD5 | טובה מאוד | הכי מהיר | ✅ **נבחר** |
-| Box2D / Planck.js | ⚠️ רק עם timestep קבוע, לא מובטח בין מכשירים | הטובה ביותר | בינונית | חלופה טובה |
-| Matter.js | ❌ | בינונית | בינונית | לא מתאים |
+| **`rapier2d` (Rust, native)** | ✅ מובטח (feature `enhanced-determinism`) + snapshot/restore מובנה | טובה מאוד | הכי מהיר (native, אין WASM) | ✅ **נבחר** |
+| Box2D (בינדינג Rust) | ⚠️ תלוי בבינדינג, לא כולם שומרים על IEEE-754 קפדני | הטובה ביותר | טובה | חלופה סבירה |
+| מימוש פיזיקה עצמי (כמו OpenTIM) | ✅ מובטח מטבעו (הקוד שלך) | תלוי כמה זמן משקיעים | לרוב פחות יציב מ-rapier | נשקל ונדחה — ראה מטה |
 
-**הנימוק המכריע:** `world.createSnapshot()` מחזיר מערך בייטים זהה במכשירים שונים אחרי אותו מספר צעדים. זה מאפשר `golden replay tests` — לשמור פתרון כ-JSON, להריץ אותו ב-CI, ולוודא שהשלב עדיין פתיר אחרי כל שינוי קוד. בלי זה, כל tweak לפיזיקה שובר שלבים בשקט.
+**למה לא ללכת בדיוק כמו OpenTIM ולממש פיזיקה משלנו?** OpenTIM שם לעצמו מטרה שונה מהותית: **לשחזר בדיוק ביט-לביט את אלגוריתם הפיזיקה המקורי של Windows 3.1 מ-1994, כולל הבאגים שלו** — זו הסיבה שיש להם `reverse-engineering/` עם ניתוח Ghidra של ה-binary המקורי. ChainWorks הוא **משחק חדש** שרק שואף ליחסי-כוח *דומים* (סעיף 1.1), לא לשחזור בייט-מדויק של מנוע ישן — אז אין סיבה לוותר על מנוע פיזיקה מודרני, יציב ומהיר יותר. `rapier2d` הוא הבחירה הנכונה כאן בדיוק כמו ב-v1.1, רק שעכשיו — בהיותנו ב-Rust — משתמשים בו **ישירות כ-crate מקורי**, בלי שכבת עטיפת WASM/JS-bindings (`@dimforge/rapier2d-deterministic` ב-npm) שהייתה נחוצה רק בגלל שהסטאק הקודם היה TypeScript.
 
-**חבילה:** `@dimforge/rapier2d-deterministic` (לא ה-build הרגיל, לא ה-SIMD).
+**הנימוק המכריע לדטרמיניזם:** snapshot/restore מובנה (`RigidBodySet`/`ColliderSet` הם `Clone`, וניתן לבצע `bincode`/`serde` serialize מלא של מצב הסימולציה) מאפשר `golden replay tests` — לשמור פתרון כ-JSON, להריץ אותו ב-CI (`cargo test`), ולוודא שהשלב עדיין פתיר אחרי כל שינוי קוד. בלי זה, כל tweak לפיזיקה שובר שלבים בשקט.
+
+**חבילה:** `rapier2d` עם `features = ["enhanced-determinism"]` (**לא** `simd8` — שני ה-features סותרים זה את זה, ראה אזהרת קומפילציה בקוד המקור של rapier).
+
+**⚠️ אין תלות בקוד של OpenTIM עצמו.** OpenTIM הוא GPL-3.0 — לו ChainWorks תלוי או fork-י בקוד שלו, ChainWorks היה חייב לצאת גם הוא GPL-3.0 (קוד פתוח לגמרי, בלי אפשרות למוצר סגור/מכירה בחנויות בלי לפרסם את כל קוד המקור). ההחלטה: ללמוד מהצורה הארכיטקטונית שלהם (חלוקת מודולים — ראה §5.5) ולכתוב קוד מקורי משלנו מאפס. זה בדיוק כמו העיקרון בסעיף 1.1 לגבי מכניקות משחק — הרעיון/המבנה מותר להשראה, המימוש הקונקרטי חייב להיות מקורי.
 
 ### 2.2 קנה מידה ופרמטרים גלובליים
 
-```ts
-export const SIM = {
-  PIXELS_PER_METER: 32,      // Rapier עובד במטרים. לעולם אל תשלח פיקסלים.
-  GRAVITY: { x: 0, y: 9.81 }, // +y = מטה בקואורדינטות משחק
-  FIXED_DT: 1 / 120,
-  MAX_SUBSTEPS_PER_FRAME: 4,
-  SOLVER_ITERATIONS: 8,
-  MAX_SIM_SECONDS: 90,        // מעבר לזה → TIMEOUT
-  WORLD_WIDTH: 1600,          // יחידות עולם (= 50m)
-  WORLD_HEIGHT: 1200,         // (= 37.5m)
-  GRID: 16,                  // snap-to-grid
-  SLEEP_ENABLED: false,      // שובר דטרמיניזם בשרשראות ארוכות! חובה false
-};
+```rust
+// core/sim/constants.rs
+pub const PIXELS_PER_METER: f32 = 32.0; // rapier2d עובד במטרים. לעולם אל תשלח פיקסלים.
+pub const GRAVITY_Y: f32 = -9.81;       // ⚠️ nannou הוא +y-up (סטנדרט מתמטי/OpenGL),
+                                         //    בשונה מ-v1.1 (Pixi, +y-down). ראה הערה מתחת.
+pub const FIXED_DT: f32 = 1.0 / 120.0;
+pub const MAX_SUBSTEPS_PER_FRAME: u32 = 4;
+pub const SOLVER_ITERATIONS: u32 = 8;
+pub const MAX_SIM_SECONDS: f32 = 90.0;  // מעבר לזה → TIMEOUT
+pub const WORLD_WIDTH: f32 = 1600.0;    // יחידות עולם (= 50m)
+pub const WORLD_HEIGHT: f32 = 1200.0;   // (= 37.5m)
+pub const GRID: f32 = 16.0;             // snap-to-grid
+pub const SLEEP_ENABLED: bool = false;  // שובר דטרמיניזם בשרשראות ארוכות! חובה false
 ```
+
+> **הערת קואורדינטות (v1.2):** `nannou` משתמש בקונבנציית +y-up סטנדרטית (כמו OpenGL/מתמטיקה רגילה) — למעלה על המסך הוא y חיובי. זה **הפוך** מהנחת היסוד של v1.1 (מבוססת Pixi.js, שהיא +y-down כמו רוב ה-canvas 2D של הדפדפן). המשמעות המעשית: כבידה היא `y = -9.81` (לא `+9.81`), ו"למעלה במסך" = y גדול. עדכן כל חישוב מצלמה/הצבה בהתאם. זה לא משנה שום החלטת gameplay — רק את הסימן המוסכם בקוד.
 
 ### 2.3 מכונת המצבים של המשחק
 
@@ -300,49 +309,55 @@ export const SIM = {
 | SOLVED | ממשיכה לרוץ 2s לצורך חגיגה | מוערך | next level, reset |
 | FAILED | קפואה | קפוא | reset |
 
-### 2.4 לולאת המשחק — מימוש מדויק
+### 2.4 לולאת המשחק — מימוש מדויק (Rust, v1.2)
 
-```ts
-// core/sim/FixedStepLoop.ts
-class FixedStepLoop {
-  private accumulator = 0;
-  private simTime = 0;
-  private tickIndex = 0;
+```rust
+// core/sim/fixed_step_loop.rs
+pub struct FixedStepLoop {
+    accumulator: f32,
+    sim_time: f32,
+    tick_index: u64,
+}
 
-  frame(realDtSeconds: number) {
-    if (this.state !== 'RUNNING' && this.state !== 'SOLVED') {
-      this.renderer.draw(1.0); // מציירים גם במצב קפוא
-      return;
+impl FixedStepLoop {
+    /// קרוי פעם אחת לכל פריים רינדור. `real_dt_seconds` מגיע מ-nannou's `Update.since_last`.
+    pub fn frame(&mut self, ctx: &mut SimContext, real_dt_seconds: f32) {
+        if !matches!(ctx.state, GameState::Running | GameState::Solved) {
+            return; // מציירים גם במצב קפוא — הקריאה לרנדר קורית בנפרד ב-view()
+        }
+        // clamp כדי למנוע death spiral אחרי מינימיזציה של האפליקציה
+        self.accumulator += real_dt_seconds.min(0.1);
+
+        let mut steps = 0;
+        while self.accumulator >= FIXED_DT && steps < MAX_SUBSTEPS_PER_FRAME {
+            self.tick(ctx);
+            self.accumulator -= FIXED_DT;
+            steps += 1;
+        }
+        // אם נשארנו מאחור — זורקים את השארית. עדיף לדלג מאשר לשבור דטרמיניזם.
+        if steps == MAX_SUBSTEPS_PER_FRAME {
+            self.accumulator = 0.0;
+        }
+        // self.accumulator / FIXED_DT זמין לרינדור כ-interpolation alpha
     }
-    // clamp כדי למנוע death of spiral אחרי מינימיזציה של האפליקציה
-    this.accumulator += Math.min(realDtSeconds, 0.1);
 
-    let steps = 0;
-    while (this.accumulator >= SIM.FIXED_DT && steps < SIM.MAX_SUBSTEPS_PER_FRAME) {
-      this.tick();
-      this.accumulator -= SIM.FIXED_DT;
-      steps++;
+    fn tick(&mut self, ctx: &mut SimContext) {
+        // ⚠️ הסדר הזה קריטי לדטרמיניזם. אל תשנה אותו.
+        ctx.energy_graph.propagate(&mut ctx.parts);      // 1. חשמל → אור/חום/סיבוב (טופולוגי)
+        ctx.thermal_system.update(&mut ctx.parts, FIXED_DT); // 2. התקדמות פתילים, הצתות
+        ctx.field_system.apply_forces(&mut ctx.physics);  // 3. רוח / ואקום / מגנט
+        ctx.rope_network.solve_tension(&mut ctx.physics); // 4. אילוצי חבלים
+        ctx.gear_train.apply_torques(&mut ctx.physics);   // 5. מומנטים למפרקים מנועיים
+        ctx.physics.step();                               // 6. הצעד הפיזיקלי (rapier2d)
+        ctx.collision_router.drain(&mut ctx.energy_graph); // 7. תרגום אירועי מגע ל-IMPACT
+        ctx.win_conditions.evaluate(ctx);                 // 8. בדיקת ניצחון/כישלון
+
+        self.sim_time += FIXED_DT;
+        self.tick_index += 1;
+        if self.sim_time > MAX_SIM_SECONDS {
+            ctx.fail(FailReason::Timeout);
+        }
     }
-    // אם נשארנו מאחור — זורקים את השארית. עדיף לדלג מאשר לשבור דטרמיניזם.
-    if (steps === SIM.MAX_SUBSTEPS_PER_FRAME) this.accumulator = 0;
-
-    this.renderer.draw(this.accumulator / SIM.FIXED_DT); // interpolation alpha
-  }
-
-  private tick() {
-    // ⚠️ הסדר הזה קריטי לדטרמיניזם. אל תשנה אותו.
-    this.energyGraph.propagate();     // 1. חשמל → אור/חום/סיבוב (טופולוגי)
-    this.thermalSystem.update();      // 2. התקדמות פתילים, הצתות
-    this.fieldSystem.applyForces();   // 3. רוח / ואקום / מגנט
-    this.ropeNetwork.solveTension();  // 4. אילוצי חבלים
-    this.gearTrain.applyTorques();    // 5. מומנטים למפרקים מנועיים
-    this.world.step(this.eventQueue); // 6. הצעד הפיזיקלי
-    this.collisionRouter.drain();     // 7. תרגום אירועי מגע ל-IMPACT
-    this.winConditions.evaluate();    // 8. בדיקת ניצחון/כישלון
-    this.simTime += SIM.FIXED_DT;
-    this.tickIndex++;
-    if (this.simTime > SIM.MAX_SIM_SECONDS) this.fail('TIMEOUT');
-  }
 }
 ```
 
@@ -350,49 +365,57 @@ class FixedStepLoop {
 
 לעולם אל תנסה "להחזיר" את הפיזיקה אחורה. Reset = בנייה מחדש של העולם מאפס.
 
-```ts
-reset() {
-  this.world.free();  // משחררים את עולם ה-WASM
-  this.world = new RAPIER.World(SIM.GRAVITY);
-  this.energyGraph.clear();
-  this.ropeNetwork.clear();
-  // editorState לעולם לא משתנה ב-RUNNING. המקור היחיד לאמת.
-  LevelLoader.build(this.world, this.level, this.editorState);
-  this.simTime = 0; this.tickIndex = 0; this.accumulator = 0;
-  this.state = 'EDIT';
+```rust
+pub fn reset(&mut self) {
+    // rapier2d: RigidBodySet/ColliderSet הם ערכים רגילים (לא WASM handle) —
+    // פשוט מחליפים אותם ב-instance חדש, ה-Drop הרגיל של Rust מטפל בניקוי.
+    self.physics = Physics::new(GRAVITY);
+    self.energy_graph.clear();
+    self.rope_network.clear();
+    // editor_state לעולם לא משתנה ב-Running. המקור היחיד לאמת.
+    LevelLoader::build(&mut self.physics, &self.level, &self.editor_state);
+    self.loop_state = FixedStepLoop::default();
+    self.state = GameState::Edit;
 }
 ```
 
 לשם כך חייבים שני מבני נתונים נפרדים:
 
-- **`editorState`** — האמת. מה השחקן הציב, איפה, באיזו זווית, ומה מחובר למה. קריא בלבד ברגע שנכנסים ל-RUNNING.
-- **`simState`** — נגזרת. גופי Rapier, handles, מצבי גרף. נהרס ונבנה מחדש בכל reset.
+- **`editor_state`** — האמת. מה השחקן הציב, איפה, באיזו זווית, ומה מחובר למה. קריא בלבד ברגע שנכנסים ל-`Running`.
+- **`physics` / `energy_graph` / וכו'** — נגזרים. גופי rapier2d, handles, מצבי גרף. נהרסים ונבנים מחדש בכל reset.
 
 ### 2.6 דטרמיניזם — צ'קליסט חובה לסוכן הקוד
 
-1. `sleepingEnabled = false`.
-2. סדר יצירה קבוע: מיין את `editorState.parts` לפי `id` (מחרוזת) לפני הבנייה. לעולם אל תסתמך על סדר `Map` / `Object.keys`.
-3. אפס שימוש ב-`Math.random()` בסימולציה. אם צריך רנדומליות ויזואלית — מחוץ ל-tick, בשכבת הרנדר בלבד.
-4. אפס תלות ב-`performance.now()` בתוך `tick()`. הזמן היחיד הוא `simTime`.
-5. אפס תלות ב-`dt` אמיתי בתוך הלוגיקה — רק `SIM.FIXED_DT`.
-6. איטרציות סולבר קבועות.
-7. בדיקה אוטומטית: אחרי 600 ticks, `md5(world.createSnapshot())` חייב להיות זהה בין 3 ריצות. הוסף את זה כטסט.
+1. `SLEEP_ENABLED = false` (יש להשבית שינה של גופים ברמת ה-`RigidBody` בעת היצירה).
+2. סדר יצירה קבוע: מיין את `editor_state.parts` לפי `id` (`String`, `sort()`) לפני הבנייה. לעולם אל תסתמך על סדר איטרציה של `HashMap`/`HashSet` (לא מובטח ב-Rust!) — השתמש ב-`BTreeMap` או במיון מפורש.
+3. אפס שימוש ב-`rand::random()` (או כל מקור רנדומליות אחר) בתוך `core::sim`/`core::graph`. אם צריך רנדומליות ויזואלית — מחוץ ל-tick, בשכבת הרינדור (`render/`) בלבד.
+4. אפס תלות ב-`std::time::Instant::now()`/`SystemTime::now()` בתוך `tick()`. הזמן היחיד הוא `sim_time`.
+5. אפס תלות ב-`real_dt_seconds` בתוך הלוגיקה — רק `FIXED_DT`.
+6. איטרציות סולבר קבועות (`IntegrationParameters` לא משתנה בזמן ריצה).
+7. בדיקה אוטומטית (`tests/determinism.rs`): אחרי 600 ticks, מצב כל הגופים (translation + rotation, מעוגל ל-6 ספרות) חייב להיות זהה בין 3 ריצות עצמאיות של אותו שלב. ראה גם snapshot roundtrip tests המובנים ב-`rapier2d` עצמו כהשראה.
 
 ### 2.7 תנאי ניצחון
 
-```ts
-type WinCondition =
-  | { type: 'CONTAINED'; subjectTag: string; containerId: string; holdMs: number }
-  | { type: 'REACHED_ZONE'; subjectTag: string; zoneId: string }
-  | { type: 'ENERGY_STATE'; nodeId: string; energy: EnergyType; active: boolean; forMs: number }
-  | { type: 'DESTROYED'; targetId: string }
-  | { type: 'ALL_OF'; conditions: WinCondition[] }
-  | { type: 'ANY_OF'; conditions: WinCondition[] };
+```rust
+// core/level/win_conditions.rs
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(tag = "type")]
+pub enum WinCondition {
+    Contained { subject_tag: String, container_id: String, hold_ms: f32 },
+    ReachedZone { subject_tag: String, zone_id: String },
+    EnergyState { node_id: String, energy: EnergyType, active: bool, for_ms: f32 },
+    Destroyed { target_id: String },
+    AllOf { conditions: Vec<WinCondition> },
+    AnyOf { conditions: Vec<WinCondition> },
+}
 
-type FailCondition =
-  | { type: 'TIMEOUT' }
-  | { type: 'SUBJECT_DESTROYED'; subjectTag: string }
-  | { type: 'LEFT_BOUNDS'; subjectTag: string };
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(tag = "type")]
+pub enum FailCondition {
+    Timeout,
+    SubjectDestroyed { subject_tag: String },
+    LeftBounds { subject_tag: String },
+}
 ```
 
 **כלל:** תנאי ניצחון בודק מצב עולם, לעולם לא הצבת רכיבים. זה מה שמאפשר פתרונות מרובים.
@@ -400,6 +423,8 @@ type FailCondition =
 ---
 
 ## 3. התאמה למובייל וממשק משתמש (Mobile UI/UX)
+
+> **הערת סטטוס (v1.2):** הסעיף הזה כולו נכתב סביב קלט מגע/נייד — זו כוונת העיצוב הסופית לשלב המובייל (M12, §7.5). **לשלב הדסקטופ הנוכחי (M0–M11)**, M5 יתאים את אותה כוונת-עיצוב לעכבר+מקלדת (קליק=touch, גרירה=drag, גלגלת עכבר=zoom, קליק ימני=תפריט הקשר במקום ה-tap-menu של 3.4). סעיף 3.9 (שפת תנועה, Juice, זהות חזותית) **כן** תקף במלואו ומיידית — הוא בלתי-תלוי בסוג הקלט. תת-הסעיפים 3.1–3.8 (פריסה, מחוות מגע, haptics, safe-area) הם החוזה ל-M12; אל תממש אותם כלשונם במסכי הדסקטופ של M6.
 
 ### 3.1 פריסת מסך
 
@@ -409,7 +434,7 @@ type FailCondition =
 ├─────────────────────────────────┤
 │                                   │
 │                                   │
-│         CANVAS (Pixi)            │ שאר הגובה
+│         CANVAS (nannou)          │ שאר הגובה
 │      pan / zoom / drop           │
 │                                   │
 │                                   │
@@ -588,7 +613,7 @@ export const SPACE  = [0, 4, 8, 12, 16, 24, 32, 48]; // scale, לא מספרים
 לא פלטוני-שטוח (כמו אייקונים בסיסיים), ולא פסאודו-תלת-ממד ריאליסטי. אזור ביניים שהוא חתימת 2026:
 
 - **צורות:** גיאומטריה וקטורית נקייה עם פינות מעוגלות עדינות (radius יחסי לגודל הרכיב, לא קבוע).
-- **תאורה:** shader אור אחד גלובלי לכל הסצנה (מקור אור עליון-שמאלי, זווית קבועה) שיוצר highlight רך עליון + AO (ambient occlusion) עדין בבסיס כל רכיב — נותן נפח בלי טקסטורות. ב-PixiJS v8: `filters` מותאמים (normal-map דמוי, לא תאורה תלת-ממדית אמיתית).
+- **תאורה:** shader אור אחד גלובלי לכל הסצנה (מקור אור עליון-שמאלי, זווית קבועה) שיוצר highlight רך עליון + AO (ambient occlusion) עדין בבסיס כל רכיב — נותן נפח בלי טקסטורות. ב-nannou/wgpu: shader מותאם (WGSL, normal-map דמוי, לא תאורה תלת-ממדית אמיתית).
 - **חומריות ללא זהות:** מתכת = ספקולר צר וחד; עץ/פלסטיק = ספקולר רחב ועמום; זכוכית = שקיפות + רפרקציה קלה. זו התחושה של TIM (חומרים שונים מתנהגים אחרת ויזואלית) בלי לשחזר עיצוב ספציפי שלו.
 - **רקע:** שכבות parallax איטיות (2–3 שכבות, מהירויות שונות בזמן pan) — מרחב מופשט (לא "סדנה", לא "מעבדה מזוהה") בגרדיאנט עדין, לא צבע אחיד שטוח.
 - **פוסט-פרוססינג עדין:** vignette רך, bloom נמוך-עוצמה על אלמנטים זוהרים בלבד (לא גלובלי — פוגע בקריאות במסך קטן), chromatic aberration כמעט בלתי מורגש בפיצוצים בלבד.
@@ -1090,153 +1115,152 @@ Chainworks · Cogwright · Brasswork · Kludge · Tinker Hollow · Clank & Cogs
 }
 ```
 
-### 5.5 ארכיטקטורת הקוד
+### 5.5 ארכיטקטורת הקוד (מעודכן v1.2 — Rust, בהשראת OpenTIM)
 
-#### 5.5.1 המלצת פלטפורמה — הנימוק המלא
+#### 5.5.1 המלצת פלטפורמה — הנימוק המלא (מעודכן v1.2)
 
-| קריטריון | TS + Rapier + Pixi + Capacitor | Flutter + Flame + forge2d | Unity |
+| קריטריון | Rust + nannou + rapier2d | TS + Pixi + Rapier-WASM (v1.1) | Unity |
 |---|---|---|---|
-| התאמה ל-Claude Code | ⭐⭐⭐⭐⭐ הכי חזק ב-TS/React | ⭐⭐⭐⭐ טוב ב-Dart | ⭐⭐ פרויקט מבוסס editor ו-.meta files |
-| דטרמיניזם | ⭐⭐⭐⭐⭐ מובטח | ⭐⭐⭐ עם timestep קבוע | ⭐⭐ |
-| מהירות איטרציה | ⭐⭐⭐⭐⭐ רענון בדפדפן בשנייה, גם מהנייד | ⭐⭐⭐⭐ hot reload | ⭐⭐ צריך build |
-| ביצועים ~200 גופים | ⭐⭐⭐⭐ מספיק (WASM) | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ בהחלט |
-| גודל APK | ⭐⭐⭐⭐ ~15MB | ⭐⭐⭐ ~25MB | ⭐⭐ ~60MB |
-| בדיקה מהנייד | ⭐⭐⭐⭐⭐ GitHub Pages → פותחים בדפדפן | ⭐ צריך build | ⭐ |
+| התאמה ל-Claude Code | ⭐⭐⭐⭐⭐ קובצי `.rs` פשוטים, בלי build-tool config מורכב | ⭐⭐⭐⭐⭐ | ⭐⭐ פרויקט מבוסס editor ו-`.meta` files |
+| דטרמיניזם | ⭐⭐⭐⭐⭐ מובטח, native, אין שכבת WASM | ⭐⭐⭐⭐⭐ מובטח (אבל דרך WASM) | ⭐⭐ |
+| מהירות איטרציה | ⭐⭐⭐⭐⭐ `cargo run` מקומי, אין build-step דפדפן/WASM | ⭐⭐⭐⭐⭐ רענון דפדפן, גם מהנייד | ⭐⭐ צריך build |
+| ביצועים ~200 גופים | ⭐⭐⭐⭐⭐ native, בלי overhead WASM | ⭐⭐⭐⭐ מספיק (WASM) | ⭐⭐⭐⭐⭐ בהחלט |
+| נאמנות ארכיטקטונית ל-OpenTIM | ⭐⭐⭐⭐⭐ אותה שפה, מודולים באותה צורה (`part.rs` וכו') | ⭐⭐ שפה שונה לגמרי | ⭐ |
+| מובייל/App Store מהיום הראשון | ⭐ `nannou` לא תומך במובייל — שלב 2 נפרד (§7.5) | ⭐⭐⭐⭐⭐ Capacitor מיידי | ⭐⭐⭐⭐⭐ |
 
-**הכרעה: TypeScript.** הסיבה המכריעה בהקשר שלך — אתה עובד מהנייד. עם הסטאק הזה, Claude Code דוחף ל-GitHub, ואתה פותח את המשחק בדפדפן בטלפון תוך 30 שניות לבדיקה. עם Flutter או Unity, כל בדיקה דורשת סביבת build. הפער בפרודוקטיביות עצום.
+**הכרעה: Rust.** לאחר סקירת [OpenTIM](https://github.com/mrfixit2001/OpenTIM) ישירות (ולא רק דרך תיעוד עליו), ברור שהארכיטקטורה שהם בחרו — Rust, פיצול ל-`part.rs`/`level_file_format.rs`/`atmosphere.rs`, ו-`nannou` לרינדור — מתאימה במדויק לצרכים של ChainWorks (חלוקת parts/level/sim זהה למה שכבר תוכנן ב-v1.0/v1.1), ו-`rapier2d` הוא ממילא Rust-crate מקורי — אין סיבה לעטוף אותו ב-WASM/JS כשאפשר להשתמש בו ישירות. **המחיר:** מאבדים את "פתח בדפדפן בטלפון תוך 30 שניות" מ-v1.1, ואת המסלול המיידי ל-App Store (Capacitor). זו החלטה מודעת: דסקטופ קודם (כמו OpenTIM עצמו), מובייל בשלב נפרד — ראה §7.5 לתוכנית המלאה כשמגיע הזמן.
 
-ה-Capacitor נכנס רק בשלב M7, כשהמשחק כבר עובד.
+**⚠️ להזכיר שוב: זו נאמנות ארכיטקטונית, לא תלות קוד.** ChainWorks לא מוסיף את ה-crate של OpenTIM כ-dependency, לא מעתיק קבצים מהם, ולא forkי את ה-repo שלהם. כל קובץ בעץ למטה נכתב מאפס. ראה §2.1 להסבר המלא על סיבת ההפרדה (רישוי GPL-3.0).
 
 #### 5.5.2 מבנה תיקיות
 
 ```
 chainworks/
-├── package.json              # pnpm, vite, typescript strict
-├── vite.config.ts
-├── capacitor.config.ts       # מתווסף ב-M7
+├── Cargo.toml
 ├── schemas/
-│   └── level.schema.json
+│   └── level.schema.json          # עדיין תקף כתיעוד/ולידציה — JSON Schema הוא שפה-אגנוסטי
 ├── data/
-│   └── parts/*.json          # קטלוג הרכיבים (52 קבצים)
+│   └── parts/*.json               # קטלוג הרכיבים (52 קבצים) — נטען דרך serde_json
 ├── levels/
 │   ├── A/*.json  B/*.json  C/*.json  D/*.json
 ├── assets/
 │   ├── sprites/  icons/  audio/  fonts/
 ├── src/
-│   ├── main.tsx
-│   ├── core/
-│   │   ├── sim/
-│   │   │   ├── SimWorld.ts          # עטיפה ל-RAPIER.World, יצירה/הרס
-│   │   │   ├── FixedStepLoop.ts     # לולאת המשחק (סעיף 2.4)
-│   │   │   ├── BodyFactory.ts       # PartDef → RAPIER.RigidBody + Collider
-│   │   │   ├── CollisionRouter.ts   # EventQueue → אירועי IMPACT
-│   │   │   ├── CollisionGroups.ts   # ביטמסקות
-│   │   │   └── Determinism.ts       # מיון, snapshot hash, בדיקות
-│   │   ├── graph/
-│   │   │   ├── EnergyGraph.ts       # צמתים, קשתות, מיון טופולוגי, זיהוי מעגלים
-│   │   │   ├── RopeNetwork.ts       # אילוצי מתיחה + ניתוב דרך גלגלות
-│   │   │   ├── GearTrain.ts         # צימוד גלגלים, יחסים, רצועות
-│   │   │   ├── ElectricBus.ts       # התפשטות חשמל
-│   │   │   ├── ThermalSystem.ts     # פתילים, הצתות, שריפות
-│   │   │   ├── FieldSystem.ts       # רוח / ואקום / מגנט / אנטי-כבידה
-│   │   │   └── LightSystem.ts       # ray-cast, חיישנים, מראות
-│   │   ├── parts/
-│   │   │   ├── PartRegistry.ts      # טעינה + ולידציה של data/parts
-│   │   │   ├── PartDef.ts           # טיפוסים
-│   │   │   ├── InteractionRules.ts  # מטריצת 1.4
-│   │   │   └── behaviors/           # קובץ לכל רכיב עם לוגיקה ייחודית
-│   │   │       ├── FuseCord.ts  ChargeBarrel.ts  PunchArm.ts
-│   │   │       ├── Conveyor.ts  WalkerUnit.ts  Balloon.ts ...
-│   │   └── level/
-│   │       ├── LevelSchema.ts       # טיפוסי Zod (נגזרים מ-JSON Schema)
-│   │       ├── LevelLoader.ts       # JSON → editorState → simState
-│   │       ├── EditorState.ts       # המקור היחיד לאמת
-│   │       ├── WinConditions.ts
-│   │       └── ReplayRunner.ts      # הרצה headless לטסטים
-│   ├── render/
-│   │   ├── PixiApp.ts  Camera.ts  PartSprite.ts
-│   │   ├── EnergyFlowRenderer.ts    # shader חלקיקים לפי סוג אנרגיה (סעיף 3.9.2)
-│   │   ├── RopeRenderer.ts          # ציור חבלים כ-spline
-│   │   ├── GhostLayer.ts            # תצוגת snap preview
-│   │   ├── EffectsLayer.ts          # עשן, ניצוצות, פיצוצים, Juice (סעיף 3.9.6)
-│   │   └── Interpolator.ts          # החלקה בין ticks
-│   ├── input/
-│   │   ├── GestureController.ts     # pan/pinch/tap/long-press
-│   │   ├── DragDropController.ts    # מכונת המצבים של סעיף 3.2
-│   │   ├── SnapSolver.ts            # היררכיית ההצמדה של 3.3
-│   │   └── ConnectionTool.ts        # כלי החבל של 3.5
-│   ├── ui/
-│   │   ├── tokens.ts                # MOTION / ELEVATION / RADIUS / SPACE (סעיף 3.9.1)
-│   │   ├── screens/  MainMenu  LevelSelect  GameScreen  Sandbox  Settings
-│   │   └── components/  PartsBin  PartInspector  GoalBanner
-│   │       PlayButton  SpeedSlider  WinOverlay  HintSheet
-│   ├── state/
-│   │   ├── gameStore.ts             # zustand
-│   │   └── progressStore.ts
-│   ├── platform/
-│   │   ├── storage.ts               # Capacitor Preferences / localStorage
-│   │   └── haptics.ts  audio.ts
-│   └── i18n/  he.json  en.json
+│   ├── main.rs                    # nannou::app(model).update(update).run() — M0/M1
+│   ├── math.rs                    # PIXELS_PER_METER, Vector helpers, camera transforms
+│   ├── render.rs                  # שכבת רינדור nannou-specific.
+│   │                              #   הערה: OpenTIM קורא לקובץ המקביל `nannou.rs`; כאן
+│   │                              #   `render.rs` כדי לא להתנגש עם ה-extern crate `nannou`
+│   │                              #   עצמו כשכותבים `use nannou::prelude::*;` בתוך הקובץ.
+│   ├── debug.rs                   # שכבת דיבוג-אוברליי (כמו OpenTIM `debug.rs`)
+│   ├── atmosphere.rs              # FieldSystem + ThermalSystem: רוח/ואקום/מגנט/חום/אש
+│   │                              #   (כמו OpenTIM `atmosphere.rs` — אותה אחריות, מימוש חדש)
+│   ├── energy_graph.rs            # EnergyGraph: צמתים/קשתות/propagate — "הסוד של הז'אנר"
+│   │                              #   מסעיף 1.1. אין ל-OpenTIM מקבילה בשם הזה; זו תוספת
+│   │                              #   ייחודית ל-ChainWorks (הם משחזרים מנוע ישן, אנחנו לא)
+│   ├── rope_network.rs            # RopeNetwork: אילוצי מתיחה + ניתוב דרך גלגלות
+│   ├── gear_train.rs              # GearTrain: צימוד גלגלים, יחסים, רצועות
+│   ├── part.rs                    # PartDef, PartInstance, ה-trait PartBehavior
+│   │                              #   (כמו OpenTIM `part.rs`)
+│   ├── parts/                     # מימוש per-part (כמו OpenTIM `parts/`)
+│   │   ├── mod.rs                 # PartRegistry — טוען ורושם את data/parts/*.json
+│   │   ├── fuse_cord.rs  charge_barrel.rs  punch_arm.rs
+│   │   └── conveyor.rs  walker_unit.rs  balloon.rs  ...
+│   ├── level_file_format.rs       # מבני serde התואמים ל-level.schema.json
+│   │                              #   (כמו OpenTIM `level_file_format.rs`)
+│   ├── level_load.rs              # LevelLoader: JSON → EditorState → World
+│   │                              #   (כמו OpenTIM `level_load.rs`)
+│   ├── editor_state.rs            # EditorState — המקור היחיד לאמת (סעיף 2.5)
+│   ├── win_conditions.rs          # WinCondition/FailCondition + evaluate() (סעיף 2.7)
+│   ├── sim/
+│   │   ├── mod.rs
+│   │   ├── physics.rs             # עטיפת rapier2d: RigidBodySet/ColliderSet/Pipeline, step()
+│   │   ├── fixed_step_loop.rs     # לולאת המשחק (סעיף 2.4)
+│   │   ├── body_factory.rs        # PartDef → RigidBody + Collider
+│   │   ├── collision_router.rs    # אירועי מגע → IMPACT
+│   │   └── collision_groups.rs    # ביטמסקות (סעיף 5.7)
+│   ├── input.rs                   # מקלדת/עכבר לדסקטופ — drag/drop, snap, rope tool (M5).
+│   │                              #   ⚠️ ה-UX המתועד בסעיף 3 נכתב למגע/נייד; ב-M5 יש להתאים
+│   │                              #   אותו לעכבר+מקלדת (קליק=touch, גרירה=drag, גלגלת=zoom)
+│   │                              #   ולתעד את ההתאמה — ראה §7.5.
+│   └── ui/
+│       └── tokens.rs              # MOTION / ELEVATION / RADIUS / SPACE כקבועי Rust (§3.9.1)
+│                                  #   HUD/מסכים מצוירים ישירות עם nannou draw (M6),
+│                                  #   בלי מסגרת UI חיצונית.
 └── tests/
-    ├── determinism.test.ts   # hash זהה אחרי 600 ticks
-    ├── solutions.test.ts     # כל solutions[] בכל שלב עוברים
-    ├── schema.test.ts        # כל קובץ שלב תקין מול ה-schema
-    └── unsolvable.test.ts    # הצבות אקראיות לא פותרות
+    ├── determinism.rs      # מצב זהה אחרי 600 ticks, 3 ריצות
+    ├── solutions.rs        # כל solutions[] בכל שלב עוברים (הרצה headless דרך ReplayRunner)
+    ├── schema.rs           # כל קובץ שלב עובר deserialize תקין מול level_file_format
+    └── unsolvable.rs       # הצבות אקראיות לא פותרות
 ```
 
-### 5.6 חוזי הליבה (interfaces שהסוכן מתחיל מהם)
+### 5.6 חוזי הליבה (ה-traits/structs שהסוכן מתחיל מהם)
 
-```ts
-// core/parts/PartDef.ts
-export interface PartDef {
-  partType: string;
-  displayKey: string;
-  category: 'STATIC'|'DYNAMIC'|'MECHANISM'|'POWER'|'PNEUMATIC'|'THERMAL'|'LIGHT'|'ACTUATOR'|'GOAL';
-  tier: 'P0'|'P1'|'P2';
-  body: BodySpec;
-  tags: string[];
-  windFactor?: number;
-  ports: Port[];
-  anchors: Anchor[];
-  editor: EditorSpec;
-  params: Record<string, ParamSpec>;
+```rust
+// src/part.rs
+#[derive(Debug, Clone, serde::Deserialize)]
+pub enum PartCategory {
+    Static, Dynamic, Mechanism, Power, Pneumatic, Thermal, Light, Actuator, Goal,
 }
 
-// core/parts/behaviors/Behavior.ts
-export interface PartBehavior {
-  readonly partType: string;
-  onCreate(ctx: SimContext, inst: PartInstance): void;
-  onTick(ctx: SimContext, inst: PartInstance): void;
-  onEnergy(ctx: SimContext, inst: PartInstance, port: string, e: EnergySignal): void;
-  onImpact(ctx: SimContext, inst: PartInstance, other: PartInstance, speed: number): void;
-  onDestroy(ctx: SimContext, inst: PartInstance): void;
-}
-// כל רכיב ממממש רק את מה שרלוונטי לו. בסיס עם מימושים ריקים.
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+pub enum Tier { P0, P1, P2 }
 
-// core/graph/EnergyGraph.ts
-export interface EnergyGraph {
-  addNode(id: string, ports: Port[]): void;
-  connect(fromNode: string, fromPort: string, toNode: string, toPort: string): void;
-  emit(nodeId: string, port: string, signal: EnergySignal): void;
-  read(nodeId: string, port: string): EnergySignal | null;
-  propagate(): void; // מיון טופולוגי; מעגלים נפתרים ב-2 מעברים max
-  clear(): void;
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct PartDef {
+    pub part_type: String,
+    pub display_key: String,
+    pub category: PartCategory,
+    pub tier: Tier,
+    pub body: BodySpec,
+    pub tags: Vec<String>,
+    pub wind_factor: Option<f32>,
+    pub ports: Vec<Port>,
+    pub anchors: Vec<Anchor>,
+    pub editor: EditorSpec,
+    pub params: std::collections::BTreeMap<String, ParamSpec>, // BTreeMap: סדר איטרציה קבוע!
+}
+
+/// כל רכיב ממממש רק את מה שרלוונטי לו — כל מתודה כאן יש לה ברירת מחדל ריקה,
+/// בדיוק כמו ה-`PartBehavior` interface ב-v1.1 (עכשיו trait עם default methods).
+pub trait PartBehavior {
+    fn part_type(&self) -> &'static str;
+    fn on_create(&self, _ctx: &mut SimContext, _inst: &mut PartInstance) {}
+    fn on_tick(&self, _ctx: &mut SimContext, _inst: &mut PartInstance) {}
+    fn on_energy(&self, _ctx: &mut SimContext, _inst: &mut PartInstance, _port: &str, _e: EnergySignal) {}
+    fn on_impact(&self, _ctx: &mut SimContext, _inst: &mut PartInstance, _other: &PartInstance, _speed: f32) {}
+    fn on_destroy(&self, _ctx: &mut SimContext, _inst: &mut PartInstance) {}
+}
+
+// src/energy_graph.rs
+pub struct EnergyGraph { /* ... */ }
+
+impl EnergyGraph {
+    pub fn add_node(&mut self, id: &str, ports: Vec<Port>) { /* ... */ }
+    pub fn connect(&mut self, from_node: &str, from_port: &str, to_node: &str, to_port: &str) { /* ... */ }
+    pub fn emit(&mut self, node_id: &str, port: &str, signal: EnergySignal) { /* ... */ }
+    pub fn read(&self, node_id: &str, port: &str) -> Option<EnergySignal> { /* ... */ }
+    /// מיון טופולוגי; מעגלים נפתרים ב-2 מעברים max.
+    pub fn propagate(&mut self, parts: &mut PartRegistry) { /* ... */ }
+    pub fn clear(&mut self) { /* ... */ }
 }
 ```
 
 ### 5.7 קבוצות התנגשות
 
-```ts
-export const GROUP = {
-  STATIC_GEOMETRY: 0b0000_0001,
-  DYNAMIC_BODY:    0b0000_0010,
-  MECHANISM:       0b0000_0100,
-  SENSOR_ZONE:     0b0000_1000,
-  WALKER:          0b0001_0000,
-  PREVIEW_GHOST:   0b0010_0000, // לא מתנגש בכלום, לתצוגה בלבד
-};
-// SENSOR_ZONE: isSensor=true, מתנגש עם DYNAMIC_BODY | WALKER בלבד
-// PREVIEW_GHOST: אף פעם לא נכנס לעולם הפיזיקה — בדיקת חפיפה ידנית
+```rust
+// src/sim/collision_groups.rs
+use rapier2d::geometry::Group;
+
+pub const STATIC_GEOMETRY: Group = Group::GROUP_1;
+pub const DYNAMIC_BODY: Group    = Group::GROUP_2;
+pub const MECHANISM: Group       = Group::GROUP_3;
+pub const SENSOR_ZONE: Group     = Group::GROUP_4;
+pub const WALKER: Group          = Group::GROUP_5;
+pub const PREVIEW_GHOST: Group   = Group::GROUP_6; // לא מתנגש בכלום, לתצוגה בלבד
+
+// SENSOR_ZONE: collider עם sensor(true), מתנגש עם DYNAMIC_BODY | WALKER בלבד
+// PREVIEW_GHOST: אף פעם לא נכנס לעולם הפיזיקה (לא מוכנס ל-ColliderSet) — בדיקת חפיפה ידנית
 ```
 
 ### 5.8 תוכנית מימוש — Milestones למימוש מול Claude Code
@@ -1245,34 +1269,34 @@ export const GROUP = {
 
 | # | Milestone | תוצר | קריטריון קבלה |
 |---|---|---|---|
-| M0 | Bootstrap | Vite + TS strict + Pixi + Rapier נטענים, קנבס ריק | קובייה נופלת על רצפה ב-60fps |
-| M1 | Sim core | `SimWorld`, `FixedStepLoop`, `BodyFactory`, `Determinism` | טסט: hash זהה אחרי 600 ticks, 3 ריצות |
-| M2 | Part registry + P0 static/dynamic | 12 רכיבים ראשונים מ-data JSON | טעינת שלב hard-coded, כדורים מתגלגלים על קרשים |
-| M3 | Level loader + win conditions | Zod schema, `lvl_a01`, מכונת מצבים, reset | שלב 1 ניתן לפתירה ולאיפוס אינסופי |
-| M4 | Energy graph + חבלים וגלגלים | `EnergyGraph`, `RopeNetwork`, `GearTrain`, `ElectricBus` | מנוע→גלגל→מסוע עובד. גלגלת מרימה משקולת |
-| M5 | Mobile input | `GestureController`, `DragDropController`, `SnapSolver`, `ConnectionTool` | אפשר לבנות פתרון שלם באצבע אחת בטלפון |
-| M6 | UI shell + Design system | `tokens.ts`, PartsBin, Inspector, HUD, LevelSelect, SpeedSlider | זרימה מלאה: תפריט→שלב→פתרון→שלב הבא, בהתאמה מלאה ל-3.9 |
-| M6.5 | **Visual polish pass (חדש ב-1.1)** | `EnergyFlowRenderer` (חלקיקי אנרגיה צבועים), Juice מלא (טבלת 3.9.6), glass HUD | וידאו של שלב שנפתר "מרגיש" כמו טריילר של משחק, לא פרוטוטייפ |
-| M7a | Native shell מוקדם | `cap add android/ios`, בדיקת WASM אמיתי במכשיר, splash, haptics | רץ במכשיר אמיתי מוקדם, לא בסוף |
-| M7b | CI/CD | GitHub Actions: build אנדרואיד → Play internal track. אחר כך iOS → TestFlight | APK במכשיר אמיתי, 60fps |
+| **M0** | **Bootstrap** | **`nannou` + `rapier2d` נטענים, חלון ריק** | **קובייה נופלת על רצפה ב-60fps+ — ✅ הושלם (ראה `src/main.rs`)** |
+| M1 | Sim core | `sim::Physics`, `FixedStepLoop`, `BodyFactory`, `Determinism` | טסט: מצב זהה אחרי 600 ticks, 3 ריצות |
+| M2 | Part registry + P0 static/dynamic | 12 רכיבים ראשונים מ-data JSON (`part.rs`, `parts/mod.rs`) | טעינת שלב hard-coded, כדורים מתגלגלים על קרשים |
+| M3 | Level loader + win conditions | `level_file_format.rs` (serde), `lvl_a01`, מכונת מצבים, reset | שלב 1 ניתן לפתירה ולאיפוס אינסופי |
+| M4 | Energy graph + חבלים וגלגלים | `energy_graph.rs`, `rope_network.rs`, `gear_train.rs` | מנוע→גלגל→מסוע עובד. גלגלת מרימה משקולת |
+| M5 | Desktop input | `input.rs`: drag/drop בעכבר, snap, rope tool | אפשר לבנות פתרון שלם בעכבר+מקלדת |
+| M6 | UI shell + Design system | `ui/tokens.rs`, PartsBin, Inspector, HUD, LevelSelect, SpeedSlider — מצוירים ב-nannou draw | זרימה מלאה: תפריט→שלב→פתרון→שלב הבא, בהתאמה מלאה ל-3.9 |
+| M6.5 | **Visual polish pass (v1.1)** | shader/ציור חלקיקי אנרגיה צבועים (§3.9.2), Juice מלא (טבלת 3.9.6), glass HUD | וידאו של שלב שנפתר "מרגיש" כמו טריילר של משחק, לא פרוטוטייפ |
+| M7 | Desktop packaging + CI | GitHub Actions matrix (`ubuntu-latest`/`macos-latest`/`windows-latest`): `cargo build --release`, אריזה ל-`.zip`/`.dmg`/`.AppImage` | בינארי מותקן ורץ בפועל על שלושת הפלטפורמות |
 | M8 | תוכן | כל 60 שלבים + P0/P1 מלאים + כל `solutions[]` golden tests עוברים ב-CI | — |
 | M9 | Sandbox | מצב חופשי, שמירה, שיתוף שלבים | משתמש יוצר ומשתף שלב |
-| M10 | Store readiness | אייקונים, צילומי מסך, מדיניות פרטיות, שאלון Data Safety, דירוג גיל, תיאורים בשתי השפות | — |
-| M11 | Soft launch | פרסום במדינה אחת קטנה, מעקב אחרי crash rate ו-retention, תיקונים, ואז פרסום גלובלי | — |
+| M10 | Desktop release readiness | עמוד itch.io/Steam, אייקונים, צילומי מסך, תיאור | דף הורדה ציבורי חי |
+| M11 | Soft launch (desktop) | פרסום ל-itch.io/GitHub Releases, מעקב באגים, תיקונים | — |
+| M12 | **מובייל / App Store (שלב 2 נפרד)** | ראה §7.5 — כרוך בהחלפת שכבת החלון/רינדור (`nannou` לא תומך במובייל) | — |
 
-**כלל מעשי:** בצע `cap add android` כבר ב-M7a, לא אחרי שהמשחק גמור. בעיות WebView, ביצועים במכשירים חלשים וטעינת WASM מתגלות רק על מכשיר אמיתי — ועדיף לגלות אותן כשיש 10 שלבים ולא 60.
+**כלל מעשי:** הרץ CI matrix (שלושת מערכות ההפעלה) כבר מ-M1 ואילך, לא רק ב-M7. באגים ספציפיים לפלטפורמה (נתיבי קבצים, קייסים של אודיו/חלונות) עדיף לגלות כשיש שלב אחד ולא 60.
 
 ### 5.9 תקציב ביצועים
 
 | מדד | יעד | תקרה |
 |---|---|---|
-| FPS (במכשיר בינוני Pixel 6a / iPhone 12) | 60 | לא יורד מ-50 |
+| FPS (מחשב נייד בינוני, ~2020) | 60 | לא יורד מ-50 |
 | גופים דינמיים פעילים | ≤ 120 | 250 |
-| זמן `world.step()` | < 3ms | 6ms |
-| זמן `graph.propagate()` | < 0.5ms | 1.5ms |
+| זמן `physics.step()` | < 3ms | 6ms |
+| זמן `energy_graph.propagate()` | < 0.5ms | 1.5ms |
 | זמן טעינת שלב | < 200ms | 400ms |
 | זיכרון | — | 280MB |
-| גודל APK/IPA | < 25MB | 45MB |
+| גודל בינארי (release, לפלטפורמה) | < 25MB | 45MB |
 
 ---
 
@@ -1280,140 +1304,105 @@ export const GROUP = {
 
 **הפרומפט הפותח המומלץ:**
 
-> אנחנו בונים משחק פאזל פיזיקלי בשם ChainWorks. המפרט המלא נמצא ב-`docs/GDD.md` — קרא אותו לפני שאתה כותב שורת קוד.
+> אנחנו בונים משחק פאזל פיזיקלי בשם ChainWorks, ב-Rust (nannou + rapier2d). המפרט המלא נמצא ב-`docs/GDD.md` — קרא אותו לפני שאתה כותב שורת קוד.
 >
-> אנחנו עובדים לפי Milestones. אתה מממש רק את M0 ועוצר. אל תיגע בשום דבר מעבר לזה.
+> אנחנו עובדים לפי Milestones. אתה מממש רק את ה-Milestone המבוקש ועוצר. אל תיגע בשום דבר מעבר לזה.
 
-**כללי ברזל לכל הפרויקט:**
+**כללי ברזל לכל הפרויקט (מעודכן v1.2):**
 
-1. TypeScript strict. אפס `any`.
-2. אפס `Math.random()` ואפס `Date.now()` בתוך `core/sim` ו-`core/graph`.
-3. כל רכיב מוגדר ב-data JSON, לא ב-hard-code.
-4. `editorState` הוא read-only במצב RUNNING.
-5. אחרי כל Milestone: הרץ `pnpm test` והראה לי שהכול ירוק.
-6. **(חדש ב-1.1)** כל ערך אנימציה/צל/רדיוס בממשק דרך `ui/tokens.ts` בלבד — אפס ערכים מומצאים inline בקומפוננטה.
-7. **(חדש ב-1.1)** אף שם, דמות, גרפיקה, פריסת שלב או טקסט שיווקי לא "בהשראת" משחק קיים באופן מזוהה (ראה סעיף 4). מכניקה ויחסים פיזיקליים — כן, קרוב ככל האפשר (ראה עיקרון-העל בסעיף 1.1).
+1. קומפילציה נקייה (`cargo build`), אפס `unwrap()`/`expect()` לא-מוצדק מחוץ ל-`main`/בדיקות.
+2. אפס רנדומליות (`rand::random()` וכו') ואפס `Instant::now()`/`SystemTime::now()` בתוך `sim/`, `energy_graph.rs`, `rope_network.rs`, `gear_train.rs`.
+3. כל רכיב מוגדר ב-data JSON (`data/parts/*.json`), לא ב-hard-code (מ-M2 ואילך; M0/M1 הם smoke test מוצהר).
+4. `EditorState` הוא read-only במצב `Running`.
+5. אחרי כל Milestone: הרץ `cargo build && cargo test` והראה לי שהכול ירוק.
+6. **(v1.1)** כל ערך אנימציה/צל/רדיוס בממשק דרך `ui/tokens.rs` בלבד — אפס ערכים מומצאים inline.
+7. **(v1.1)** אף שם, דמות, גרפיקה, פריסת שלב או טקסט שיווקי לא "בהשראת" משחק קיים באופן מזוהה (ראה סעיף 4). מכניקה ויחסים פיזיקליים — כן, קרוב ככל האפשר (ראה עיקרון-העל בסעיף 1.1).
+8. **(v1.2)** מבנה המודולים בהשראת OpenTIM (`part.rs`, `level_file_format.rs`, `atmosphere.rs` וכו', ראה §5.5) — **אך אפס תלות/fork בקוד ה-GPL-3.0 שלהם עצמו.** כל קובץ נכתב מאפס (ראה §2.1).
 
 **הרגלים שישתלמו:**
 
-- בקש `CLAUDE.md` בשורש הפרויקט עם כללי הברזל — הסוכן קורא אותו אוטומטית בכל סשן.
+- בקש `CLAUDE.md` בשורש הפרויקט עם כללי הברזל — הסוכן קורא אותו אוטומטית בכל סשן (כבר קיים בפרויקט).
 - בסוף כל Milestone, בקש commit נפרד עם תיאור ברור.
 - כשמשהו נשבר בפיזיקה, בקש קודם טסט שמשחזר את הבאג, ורק אחר כך תיקון.
 
 ---
 
-## 7. אריזה נייטיבית והוצאה לחנויות (Release Pipeline)
+## 7. אריזה והוצאה — דסקטופ קודם, מובייל בשלב 2 (Release Pipeline, v1.2)
 
-### 7.1 מה Capacitor באמת מייצר
+### 7.1 מה יוצא מ-`cargo build --release`
 
-"זו לא 'אפליקציית אתר'". Capacitor מייצר פרויקט Android Studio ופרויקט Xcode אמיתי, עם קוד נייטיב, הרשאות, אייקונים ו-splash אמיתי. התוצר הוא `.aab` ו-`.ipa` רגילים לחלוטין — בדיוק מה שהחנויות מצפות לו.
+בניגוד לסטאק ה-Capacitor של v1.1 (שהיה צריך לעטוף web build), Rust+nannou מייצר **בינארי נייטיבי אמיתי אחד** לכל פלטפורמה — אין WebView, אין שכבת עטיפה, אין גוטצ'ות WASM/MIME-type. `cargo build --release --target <triple>` נותן:
 
-```
-chainworks/
-├── android/  ← פרויקט Gradle מלא. נכנס ל-.git.
-│   └── app/build.gradle (versionCode, versionName, minSdk 24, targetSdk 35)
-├── ios/App/  ← פרויקט Xcode מלא. נכנס ל-.git.
-│   └── App.xcodeproj (deployment target 15.0)
-└── capacitor.config.ts
-```
-
-```ts
-// capacitor.config.ts
-import type { CapacitorConfig } from '@capacitor/cli';
-
-const config: CapacitorConfig = {
-  appId: 'com.yourstudio.chainworks', // reverse-DNS, לא ניתן לשינוי אחרי פרסום!
-  appName: 'ChainWorks',
-  webDir: 'dist',
-  android: { allowMixedContent: false, webContentsDebuggingEnabled: false },
-  ios: { contentInset: 'never', scrollEnabled: false },
-  plugins: {
-    SplashScreen: { launchAutoHide: false, backgroundColor: '#14171F' },
-    StatusBar: { style: 'DARK', overlaysWebView: false },
-  },
-  server: { androidScheme: 'https' }, // חובה — בלי זה WASM לא נטען באנדרואיד
-};
-export default config;
-```
-
-> ⚠️ **הגוטצ'ה הגדולה ביותר:** טעינת ה-WASM של Rapier בתוך WebView. חייבים `vite-plugin-wasm` + `vite-plugin-top-level-await`, וטעינה אסינכרונית מפורשת (`await RAPIER.init()`) לפני יצירת העולם. בדפדפן זה "סתם עובד"; ב-WKWebView זה נשבר בשקט אם ה-MIME type שגוי. בדוק את זה מוקדם ככל האפשר — לא בסוף M7.
-
-### 7.2 בנייה מהנייד — הצינור המלא
-
-זו הנקודה הקריטית בשבילך: **אתה לא צריך מחשב.** הכול דרך GitHub Actions.
-
-**אנדרואיד — קל**
-
-`ubuntu-latest` runner, חינם למאגר ציבורי:
-
-```
-npm ci → npm run build → npx cap sync android
-→ ./gradlew bundleRelease → עם חתימה keystore מ-GitHub Secrets
-→ העלאה אוטומטית ל-Play Console (internal track) עם r0adkll/upload-google-play
-```
-
-מרגע ה-push ועד ל-build במסלול הפנימי בפליי: ~8 דקות. אתה מתקין מהטלפון.
-
-**iOS — אפשרי, אבל דורש הכנה**
-
-`macos-latest` runner (עולה 10× דקות מהמכסה, אבל ריצה אחת ≈ 12 דקות):
-
-```
-npx cap sync ios → fastlane gym (archive + export)
-→ עם חתימה App Store Connect API Key (.p8) מ-Secrets
-→ fastlane pilot upload → TestFlight
-```
-
-**חלופה קלה יותר: Codemagic** — יש להם תמיכה מובנית ב-Capacitor, ניהול חתימות אוטומטי, ו-500 דקות חינם בחודש. מהטלפון זה נוח בהרבה מלהילחם ב-fastlane.
-
-### לפני M7 מה אתה חייב להשיג
-
-| פריט | עלות | הערה |
+| פלטפורמה | Target triple | תוצר |
 |---|---|---|
-| Google Play Console | $25 חד-פעמי | אימות זהות — יכול לקחת שבוע |
-| Apple Developer Program | $99 לשנה | אימות יכול לקחת 1–2 שבועות. התחל עכשיו |
-| Android keystore | חינם | צור פעם אחת, גבה בכספת. אובדן = אי אפשר לעדכן את האפליקציה לעולם |
-| App Store Connect API Key | חינם | `.p8` — מאפשר חתימה אוטומטית בלי Mac |
-| דומיין + מדיניות פרטיות | ~$12 לשנה | חובה בשתי החנויות, גם למשחק בלי איסוף נתונים |
+| Windows | `x86_64-pc-windows-msvc` | `chainworks.exe` |
+| macOS (Intel) | `x86_64-apple-darwin` | בינארי Mach-O, עוטפים ב-`.app`/`.dmg` |
+| macOS (Apple Silicon) | `aarch64-apple-darwin` | כנ"ל |
+| Linux | `x86_64-unknown-linux-gnu` | בינארי ELF, עוטפים ב-`.AppImage` (נייד בין הפצות) |
 
-### 7.3 עמידה בכללי החנויות
+כלי מומלץ לאריזה נוחה חוצה-פלטפורמות: [`cargo-dist`](https://github.com/axodotdev/cargo-dist) — בונה את המטריצה, יוצר arciwes/installers, ומפרסם ל-GitHub Releases אוטומטית מ-CI. אלטרנטיבה פשוטה יותר בהתחלה: zip את ה-binary + `assets/`/`data/`/`levels/` יחד ידנית בכל job.
 
-**Apple — שתי ההנחיות הרלוונטיות**
+### 7.2 בנייה ב-CI — הצינור המלא
 
-- **4.2 Minimum Functionality.** ההגנה שלך: המשחק עובד לגמרי אופליין, כל הנכסים והשלבים ארוזים ב-bundle, יש haptics נייטיביים, אין WebView שגולש לאינטרנט, ויש משחקיות אמיתית. זה עובר — משחקים רבים בחנות בנויים כך. אל תטען שלבים מהשרת בגרסה הראשונה — זה בדיוק מה שמפעיל את 4.2.
-- **2.1 App Completeness.** גרסה ראשונה עם 60 שלבים, בלי crashes, בלי "coming soon". שלבים נעולים זה בסדר; מסכים ריקים זה לא.
+**GitHub Actions matrix**, שלוש מערכות הפעלה במקביל:
 
-**Google Play**
+```yaml
+# .github/workflows/release.yml (תוכן לדוגמה, ראה M7)
+strategy:
+  matrix:
+    include:
+      - os: ubuntu-latest
+        target: x86_64-unknown-linux-gnu
+      - os: macos-latest
+        target: aarch64-apple-darwin
+      - os: windows-latest
+        target: x86_64-pc-windows-msvc
+runs-on: ${{ matrix.os }}
+steps:
+  - uses: actions/checkout@v4
+  - uses: dtolnay/rust-toolchain@stable
+    with: { targets: ${{ matrix.target }} }
+  # לינוקס בלבד: apt-get install libxkbcommon-dev libwayland-dev libudev-dev
+  #   libasound2-dev libxi-dev libgl1-mesa-dev libvulkan-dev (ראה תלויות M0)
+  - run: cargo build --release --target ${{ matrix.target }}
+  - run: cargo test --release --target ${{ matrix.target }}
+  # ואז: אריזה + העלאה כ-artifact / GitHub Release
+```
 
-- **Data Safety form** — הצהר "no data collected". תוסיף אם analytics, ודורש עדכון.
-- **Target API level** — Play דורש targetSdk עדכני (35 נכון ל-2026). זה מתעדכן כל שנה, ומי שלא מעדכן — האפליקציה נעלמת מהחנות.
-- **AAB בלבד**, לא APK.
+מרגע ה-push ועד לבינארי מוכן בשלוש מערכות ההפעלה: כ-10–15 דקות (macOS/Windows runners איטיים יותר מ-Linux).
 
-**דירוג גיל**
+**הפצה בפועל (M10/M11):** [itch.io](https://itch.io) הוא הערוץ הכי חסר-חיכוך למשחק דסקטופ אינדי חדש — אין תהליך אישור, אפשר לדחוף build חדש דרך `butler` (כלי ה-CLI הרשמי של itch) ישירות מ-CI. Steam הוא אופציה בהמשך (עמלת $100 לפעם אחת, תהליך review, אבל חשיפה גדולה משמעותית) — לא חובה לגרסה ראשונה.
 
-עם הטבלה בסעיף 4.4 (בלי נשק חם, בלי בעלי חיים נפגעים, בלי דם) אתה מקבל 4+/Everyone. זה פותח את כל קהל היעד. אם תוסיף פיצוצים ריאליסטיים או דמויות שנפגעות — תעלה ל-9+/Teen ותצמצם את השוק.
+### 7.3 עמידה בסטנדרטים בסיסיים
 
-### 7.4 נכסים נדרשים לחנות
+אין כאן חנות עם כללי סקירה נוקשים כמו Apple/Google (זה ההבדל המרכזי מ-v1.1) — אבל עדיין:
 
-| נכס | אנדרואיד | iOS |
+- **קרדיטים/רישוי:** קובץ `LICENSE`/`THIRD-PARTY-NOTICES` שמפרט את כל ה-crates (nannou, rapier2d וכו') ואת הרישיונות שלהם (MIT/Apache-2.0 ברובם — תואם לגמרי למוצר קנייני).
+- **דירוג גיל (אם מפרסמים ל-Steam בעתיד):** עם הטבלה בסעיף 4.4 (בלי נשק חם, בלי בעלי חיים נפגעים, בלי דם) התוכן מתאים לכל הגילאים ללא צורך בדירוג מיוחד.
+- **מדיניות פרטיות:** אם אין איסוף נתונים בכלל (אין analytics/telemetry ב-MVP) — אפשר הצהרה פשוטה בעמוד itch.io במקום מדיניות מלאה נפרדת.
+
+### 7.4 נכסים נדרשים לעמוד ההורדה
+
+| נכס | itch.io | Steam (עתידי) |
 |---|---|---|
-| אייקון | 512×512 PNG | 1024×1024 PNG (בלי שקיפות, בלי פינות מעוגלות) |
-| Feature graphic | 1024×500 | — |
-| צילומי מסך | 2–8, מינ' 320px | חובה iPhone 6.5"+6.9"; אם תומך iPad |
-| וידאו תצוגה | אופציונלי (YouTube) | אופציונלי (App Preview, 15–30s) |
-| תיאור | 4000 תווים | 4000 תווים + subtitle 30 תווים |
-| קישור מדיניות פרטיות | חובה | חובה |
+| Cover image | 630×500 | 616×353 (header capsule) + עוד כמה גדלים |
+| צילומי מסך | 3–8, כל רזולוציה | 5+, 1920×1080 מומלץ |
+| GIF/וידאו תצוגה | מומלץ מאוד — משחק פאזל "מוכיח את עצמו" בתנועה | trailer חובה בפועל |
+| תיאור | Markdown חופשי | חובה תיאור קצר + ארוך |
 
-**טיפ:** צילומי המסך הם 80% מהחלטת ההורדה. צלם 6 מסכים שמראים שלבים שונים באמצע ריצה — **עם ה-Juice וקידוד הצבע לפי אנרגיה גלוי בבירור** (סעיף 3.9.2) — עם טקסט-על קצר שמסביר את המכניקה. לא מסכי תפריט.
+**טיפ:** לצילום ה-GIF/screenshots — הראה שלב באמצע פתרון עם ה-Juice וקידוד הצבע לפי אנרגיה גלוי בבירור (סעיף 3.9.2), לא מסך תפריט.
 
-### 7.5 עדכון ל-Milestones
+### 7.5 מובייל / App Store — שלב 2 נפרד (חשוב לקרוא!)
 
-| # | Milestone | מה מתווסף |
-|---|---|---|
-| M7a | Native shell מוקדם | `cap add android/ios`, בדיקת WASM אמיתי במכשיר, splash, haptics מוקדם, לא בסוף |
-| M7b | CI/CD | GitHub Actions: build אנדרואיד → Play internal track. אחר כך iOS → TestFlight |
-| M10 | Store readiness | שאלון Data Safety, אייקונים, צילומי מסך, מדיניות פרטיות, דירוג גיל, תיאורים בשתי השפות |
-| M11 | Soft launch | פרסום במדינה אחת קטנה, מעקב אחרי crash rate ו-retention, תיקונים, ואז פרסום גלובלי |
+זו הנקודה הכי חשובה לגבי ציפיות: **המטרה הסופית שהוגדרה למשחק היא הגעה ל-App Store**, אבל `nannou` (הבחירה שלנו לדסקטופ, בהשראת OpenTIM) **לא תומך במובייל** — הוא בנוי על `winit`+`wgpu` בקונפיגורציה דסקטופ-בלבד. המשמעות המעשית:
+
+1. **הליבה (`sim/`, `energy_graph.rs`, `part.rs`, `level_*`) נשארת כמעט ללא שינוי.** זה כל הסיבה לארכיטקטורה השכבתית מסעיף 5.5 — הלוגיקה לא תלויה ב-nannou.
+2. **מה שכן יוחלף:** שכבת `render.rs` (חלון/רינדור) ו-`input.rs` (קלט מגע במקום עכבר/מקלדת). שתי אפשרויות מרכזיות כשמגיע הזמן:
+   - **`wgpu` + `winit` ישירות** (בלי nannou) — winit תומך ב-Android/iOS; יותר עבודה ידנית אבל אותה שפה (Rust) ואותו core.
+   - **מעבר למנוע Rust שכבר תומך מובייל** (למשל `bevy`, שכן בנוי על wgpu+winit עם תמיכת מובייל רשמית) — יותר עבודה, אבל אקוסיסטם בשל יותר (input touch, packaging).
+3. **אריזה לחנויות:** ברגע שיש בינארי Android (`.apk`/`.aab` דרך `cargo-apk`/`cargo-ndk`) ו-iOS (Xcode project דרך `cargo-lipo`+ידני) — תהליך ההגשה בפועל (Google Play Console, Apple Developer Program, דירוג גיל, נכסי חנות) זהה למה שתועד ב-v1.1 של המסמך הזה (עלויות $25/$99, keystore, וכו') — זה לא משתנה, רק שכבת ה-build שמובילה לשם.
+
+**מסקנה מעשית:** אל תדחה את ה"שלב דסקטופ" בגלל זה — הוא לא זמן מבוזבז. רוב הקוד (הפיזיקה, ה-parts, השלבים, תנאי הניצחון) עובר ישירות לגרסת המובייל בלי שינוי. מה שדורש עבודה חוזרת הוא בדיוק השכבה הדקה שממילא הייתה צריכה עדכון גם ב-v1.1 (Pixi→Capacitor). תזמון ריאלי: להתחיל את שלב המובייל (M12) רק אחרי M11 (soft launch דסקטופ מוצלח) — כדי לוודא שהמשחק עצמו כבר מוכח לפני שמשקיעים בפורט.
 
 ---
 

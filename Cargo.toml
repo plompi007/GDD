@@ -1,0 +1,31 @@
+[package]
+name = "chainworks"
+version = "0.0.1"
+edition = "2021"
+description = "ChainWorks — an original chain-reaction physics puzzle game."
+license = "UNLICENSED"
+
+[[bin]]
+name = "chainworks"
+path = "src/main.rs"
+
+[dependencies]
+# Pinned to the pre-Bevy classic API (nannou 0.20 was rewritten on top of
+# Bevy's ECS — a much larger, less stable surface for a project that only
+# needs a plain window + immediate-mode 2D draw calls).
+nannou = "=0.19.0"
+# "enhanced-determinism" trades a little performance for identical results
+# across platforms/architectures — required by docs/GDD.md §2.6 (golden
+# replay tests must reproduce a solved level bit-for-bit).
+rapier2d = { version = "0.35", features = ["enhanced-determinism"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+md5 = "0.7"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
