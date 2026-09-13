@@ -1,0 +1,54 @@
+name: Android debug build (M3.5)
+
+# M3.5 (docs/GDD.md §3.5/§7.6): the dev sandbox this project is built in
+# cannot reach dl.google.com (org network policy), so it cannot fetch the
+# Android NDK and cross-compile/link locally. GitHub Actions runners have
+# normal internet access, so this workflow does the actual APK build.
+#
+# This is a *debug* smoke-test build only, self-signed by cargo-apk's
+# built-in debug keystore, for installing via `adb install` on a personal
+# device to confirm the app boots at all on real Android. Release
+# signing/Play Store upload is M7/M10/M11 work, not this workflow.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - "**"
+    paths:
+      - "src/**"
+      - "data/**"
+      - "levels/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/android.yml"
+
+jobs:
+  android-debug-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install cargo-apk
+        run: cargo install cargo-apk
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager --install "ndk;26.1.10909125"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
+
+      - name: Build debug APK
+        run: cargo apk build
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: chainworks-debug-apk
+          path: target/debug/apk/*.apk
+          if-no-files-found: error

@@ -9,6 +9,29 @@ license = "UNLICENSED"
 name = "chainworks"
 path = "src/main.rs"
 
+# "cdylib" is what Android actually loads (as libchainworks.so, via JNI from
+# the thin Java Activity cargo-apk generates); "rlib" keeps it usable as a
+# normal library on desktop (src/main.rs, tests/*.rs). See src/app.rs for
+# the #[bevy_main] entry point this requires.
+[lib]
+name = "chainworks"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+# M3.5 (docs/GDD.md §7.5): built via `cargo apk build` — see
+# .github/workflows/android.yml, since this sandboxed dev environment
+# cannot reach dl.google.com to fetch the NDK itself (org network policy,
+# not something to retry) and so cannot cross-compile/link for Android
+# locally. GitHub Actions runners have normal internet access and build
+# the real APK. `package` is a placeholder — MUST change to your own
+# reverse-DNS before any real store submission (docs/GDD.md §7.2/§7.5:
+# this can never change post-publish).
+[package.metadata.android]
+package = "com.chainworksgame.app"
+apk_label = "ChainWorks"
+target_sdk_version = 34
+min_sdk_version = 26
+
 [dependencies]
 # Bevy (v1.3 pivot — see docs/GDD.md §2.1a): unlike `nannou`, Bevy natively
 # targets Android/iOS/desktop/web from one codebase, MIT/Apache-2.0 licensed

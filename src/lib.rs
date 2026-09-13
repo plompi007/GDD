@@ -3,6 +3,7 @@
 //! level-solvability, later golden-replay/solutions tests) exercise the
 //! exact same code paths as the real game, not a reimplementation.
 
+pub mod app;
 pub mod game_state;
 pub mod level_file_format;
 pub mod level_load;
