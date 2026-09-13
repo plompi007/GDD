@@ -1,0 +1,25 @@
+{
+  "partType": "ball_iron",
+  "displayKey": "part.ball_iron",
+  "category": "DYNAMIC",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 14 },
+    "mass": 5.0,
+    "restitution": 0.15,
+    "friction": 0.35,
+    "gravityScale": 1.0
+  },
+  "tags": ["METALLIC"],
+  "windFactor": 1.0,
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/ball_iron.png",
+    "binIcon": "icons/ball_iron.svg"
+  },
+  "params": {}
+}

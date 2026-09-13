@@ -1,0 +1,25 @@
+{
+  "partType": "ball_wood",
+  "displayKey": "part.ball_wood",
+  "category": "DYNAMIC",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 14 },
+    "mass": 1.2,
+    "restitution": 0.40,
+    "friction": 0.50,
+    "gravityScale": 1.0
+  },
+  "tags": ["FLAMMABLE"],
+  "windFactor": 1.0,
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/ball_wood.png",
+    "binIcon": "icons/ball_wood.svg"
+  },
+  "params": {}
+}

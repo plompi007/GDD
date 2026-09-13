@@ -1,0 +1,25 @@
+{
+  "partType": "ball_glass",
+  "displayKey": "part.ball_glass",
+  "category": "DYNAMIC",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 12 },
+    "mass": 0.30,
+    "restitution": 0.60,
+    "friction": 0.05,
+    "gravityScale": 1.0
+  },
+  "tags": ["FRAGILE"],
+  "windFactor": 1.0,
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/ball_glass.png",
+    "binIcon": "icons/ball_glass.svg"
+  },
+  "params": {}
+}

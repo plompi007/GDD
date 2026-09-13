@@ -1,0 +1,23 @@
+{
+  "partType": "wall_brick",
+  "displayKey": "part.wall_brick",
+  "category": "STATIC",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 32, "h": 128 },
+    "friction": 0.70,
+    "restitution": 0.05
+  },
+  "tags": ["DESTRUCTIBLE"],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 90,
+    "flippable": false,
+    "sprite": "parts/wall_brick.png",
+    "binIcon": "icons/wall_brick.svg"
+  },
+  "params": {}
+}

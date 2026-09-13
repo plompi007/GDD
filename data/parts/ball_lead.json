@@ -1,0 +1,25 @@
+{
+  "partType": "ball_lead",
+  "displayKey": "part.ball_lead",
+  "category": "DYNAMIC",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 14 },
+    "mass": 8.0,
+    "restitution": 0.05,
+    "friction": 0.45,
+    "gravityScale": 1.0
+  },
+  "tags": ["HEAVY", "METALLIC"],
+  "windFactor": 1.0,
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/ball_lead.png",
+    "binIcon": "icons/ball_lead.svg"
+  },
+  "params": {}
+}

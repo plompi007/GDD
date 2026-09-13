@@ -4,5 +4,7 @@
 //! as the real game, not a reimplementation.
 
 pub mod math;
+pub mod part;
+pub mod parts;
 pub mod scenes;
 pub mod sim;

@@ -1,0 +1,122 @@
+//! `PartRegistry`: loads and validates every `data/parts/*.json` file
+//! (docs/GDD.md §5.5, mirroring OpenTIM's `parts/` responsibility).
+//!
+//! Part JSON is embedded at compile time (`include_str!`) rather than read
+//! from disk at runtime: it keeps M2 simple and behaves identically on
+//! desktop and Android, where arbitrary filesystem reads aren't available
+//! the same way (assets need APK bundling). A hot-reloadable
+//! `bevy_asset`-based loader is a reasonable upgrade for a later polish
+//! pass, not required for correctness now — nothing about the `PartDef`
+//! shape (src/part.rs) needs to change when that happens.
+
+use std::collections::BTreeMap;
+
+use bevy::prelude::*;
+
+use crate::part::PartDef;
+
+/// One `include_str!` per file, matching docs/GDD.md §1.3's initial P0
+/// catalog (5 static + 7 dynamic = 12). Add new parts here as M4+ needs
+/// them, keeping this list in sync with `data/parts/`.
+const PART_JSON: &[&str] = &[
+    include_str!("../../data/parts/floor_ground.json"),
+    include_str!("../../data/parts/plank_wood.json"),
+    include_str!("../../data/parts/beam_steel.json"),
+    include_str!("../../data/parts/wall_brick.json"),
+    include_str!("../../data/parts/spike_pin.json"),
+    include_str!("../../data/parts/ball_lead.json"),
+    include_str!("../../data/parts/ball_iron.json"),
+    include_str!("../../data/parts/ball_wood.json"),
+    include_str!("../../data/parts/ball_rubber.json"),
+    include_str!("../../data/parts/ball_glass.json"),
+    include_str!("../../data/parts/crate_wood.json"),
+    include_str!("../../data/parts/balloon_lift.json"),
+];
+
+/// All known part definitions, keyed by `part_type`. A `BTreeMap` (not
+/// `HashMap`) so iteration order is always the same across runs — required
+/// by CLAUDE.md rule 2 (determinism) for any code that ever iterates every
+/// part (e.g. a future parts-bin UI).
+#[derive(Resource, Debug, Default)]
+pub struct PartRegistry {
+    defs: BTreeMap<String, PartDef>,
+}
+
+impl PartRegistry {
+    pub fn get(&self, part_type: &str) -> Option<&PartDef> {
+        self.defs.get(part_type)
+    }
+
+    pub fn part_types(&self) -> impl Iterator<Item = &str> {
+        self.defs.keys().map(String::as_str)
+    }
+
+    pub fn len(&self) -> usize {
+        self.defs.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.defs.is_empty()
+    }
+}
+
+/// Parses every embedded part JSON file. Panics on malformed JSON or a
+/// `partType` that doesn't match its own file — both are build-time content
+/// bugs (bad data shipped in the binary), not conditions the running game
+/// should ever need to recover from, so a hard failure at startup is
+/// correct here (CLAUDE.md rule 1).
+pub fn build_registry() -> PartRegistry {
+    let mut defs = BTreeMap::new();
+    for json in PART_JSON {
+        let def: PartDef = serde_json::from_str(json)
+            .unwrap_or_else(|e| panic!("invalid part JSON in data/parts/: {e}\n{json}"));
+        let previous = defs.insert(def.part_type.clone(), def);
+        if let Some(previous) = previous {
+            panic!("duplicate partType in data/parts/: {}", previous.part_type);
+        }
+    }
+    PartRegistry { defs }
+}
+
+pub struct PartsPlugin;
+
+impl Plugin for PartsPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(build_registry());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_embedded_part_json_parses_and_has_unique_part_types() {
+        let registry = build_registry();
+        assert_eq!(registry.len(), PART_JSON.len());
+    }
+
+    #[test]
+    fn expected_p0_parts_are_present() {
+        let registry = build_registry();
+        for part_type in [
+            "floor_ground",
+            "plank_wood",
+            "beam_steel",
+            "wall_brick",
+            "spike_pin",
+            "ball_lead",
+            "ball_iron",
+            "ball_wood",
+            "ball_rubber",
+            "ball_glass",
+            "crate_wood",
+            "balloon_lift",
+        ] {
+            assert!(
+                registry.get(part_type).is_some(),
+                "missing expected P0 part: {part_type}"
+            );
+        }
+    }
+}

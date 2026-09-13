@@ -1,0 +1,29 @@
+{
+  "partType": "ball_rubber",
+  "displayKey": "part.ball_rubber",
+  "category": "DYNAMIC",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 14 },
+    "mass": 0.6,
+    "restitution": 0.85,
+    "friction": 0.80,
+    "linearDamping": 0.01,
+    "angularDamping": 0.02,
+    "gravityScale": 1.0,
+    "ccd": true
+  },
+  "tags": ["BOUNCY"],
+  "windFactor": 1.0,
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/ball_rubber.png",
+    "binIcon": "icons/ball_rubber.svg",
+    "hitboxPadding": 10
+  },
+  "params": {}
+}

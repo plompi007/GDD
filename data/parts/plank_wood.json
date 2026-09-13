@@ -1,0 +1,23 @@
+{
+  "partType": "plank_wood",
+  "displayKey": "part.plank_wood",
+  "category": "STATIC",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 128, "h": 16 },
+    "friction": 0.55,
+    "restitution": 0.20
+  },
+  "tags": [],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 15,
+    "flippable": false,
+    "sprite": "parts/plank_wood.png",
+    "binIcon": "icons/plank_wood.svg"
+  },
+  "params": {}
+}

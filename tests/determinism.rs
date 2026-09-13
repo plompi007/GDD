@@ -8,7 +8,8 @@ use bevy::prelude::*;
 use bevy::time::TimeUpdateStrategy;
 use bevy::transform::TransformPlugin;
 
-use chainworks::scenes::{spawn_smoke_test_scene, FallingBox};
+use chainworks::parts::PartsPlugin;
+use chainworks::scenes::{spawn_smoke_test_scene, Tracked};
 use chainworks::sim::{SimPlugin, FIXED_DT};
 
 const TICKS: u32 = 600;
@@ -24,6 +25,7 @@ fn run_scene(ticks: u32) -> BodyState {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(TransformPlugin)
+        .add_plugins(PartsPlugin)
         .add_plugins(SimPlugin)
         .add_systems(Startup, spawn_smoke_test_scene)
         // Deterministic time source: exactly one FixedUpdate tick per
@@ -39,10 +41,10 @@ fn run_scene(ticks: u32) -> BodyState {
 
     let mut query = app
         .world_mut()
-        .query_filtered::<&Transform, With<FallingBox>>();
+        .query_filtered::<&Transform, With<Tracked>>();
     let transform = query
         .single(app.world())
-        .expect("smoke-test scene must contain exactly one FallingBox");
+        .expect("smoke-test scene must contain exactly one Tracked entity");
 
     BodyState {
         x: transform.translation.x,

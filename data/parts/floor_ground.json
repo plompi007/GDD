@@ -1,0 +1,22 @@
+{
+  "partType": "floor_ground",
+  "displayKey": "part.floor_ground",
+  "category": "STATIC",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 1600, "h": 32 },
+    "friction": 0.6,
+    "restitution": 0.0
+  },
+  "tags": ["WORLD_BOUNDARY"],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/floor_ground.png",
+    "binIcon": "icons/floor_ground.svg"
+  },
+  "params": {}
+}
