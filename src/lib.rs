@@ -4,12 +4,15 @@
 //! exact same code paths as the real game, not a reimplementation.
 
 pub mod app;
+pub mod energy_graph;
 pub mod game_state;
+pub mod gear_train;
 pub mod level_file_format;
 pub mod level_load;
 pub mod math;
 pub mod part;
 pub mod parts;
+pub mod rope_network;
 pub mod scenes;
 pub mod sim;
 pub mod win_conditions;

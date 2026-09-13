@@ -83,6 +83,12 @@ pub fn spawn_part(
                 linear_damping: def.body.linear_damping,
                 angular_damping: def.body.angular_damping,
             },
+            // Without an explicit `Velocity`, bevy_rapier2d still simulates
+            // the body fine (it tracks velocity internally regardless) but
+            // no Bevy-side system can read or correct it — both
+            // `rope_network`'s tension impulse and `conveyor`'s belt nudge
+            // need read/write access to every dynamic body's velocity.
+            Velocity::zero(),
         ));
         if def.body.ccd {
             entity.insert(Ccd::enabled());

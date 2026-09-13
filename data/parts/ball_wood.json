@@ -14,7 +14,9 @@
   "tags": ["FLAMMABLE"],
   "windFactor": 1.0,
   "ports": [],
-  "anchors": [],
+  "anchors": [
+    { "idx": 0, "kind": "TENSION", "offset": { "x": 0, "y": 0 } }
+  ],
   "editor": {
     "rotatable": false,
     "flippable": false,

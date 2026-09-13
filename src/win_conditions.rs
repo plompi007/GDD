@@ -3,13 +3,16 @@
 //! possible. Runs in `SimSet::WinConditions`, last in the tick order
 //! (docs/GDD.md §2.4), and only while `GameState::Running`.
 //!
-//! M3 scope/known limitation: hold-duration (`holdMs`) tracking is
+//! Known limitation carried from M3: hold-duration (`holdMs`) tracking is
 //! implemented for *top-level* conditions only. A `CONTAINED` nested
 //! inside `ALL_OF`/`ANY_OF` is evaluated instantaneously (no memory of how
-//! long it's been true) — fine for every level this milestone ships with
-//! (none nest conditions), but worth fixing before a level actually needs
-//! it. `ENERGY_STATE` always evaluates false until M4's energy graph
-//! exists.
+//! long it's been true) — fine for every level shipped so far (none nest
+//! conditions), but worth fixing before a level actually needs it.
+//! `ENERGY_STATE` still always evaluates false: M4 added a real
+//! `EnergyGraph` (`crate::energy_graph`), but no shipped level's win/fail
+//! condition needs to read it yet, and doing so requires a part-registry
+//! lookup this system doesn't otherwise need — wire it up when a level
+//! actually requires it.
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;

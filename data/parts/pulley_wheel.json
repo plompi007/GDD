@@ -1,0 +1,22 @@
+{
+  "partType": "pulley_wheel",
+  "displayKey": "part.pulley_wheel",
+  "category": "MECHANISM",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "ball", "radius": 14 }
+  },
+  "tags": [],
+  "ports": [],
+  "anchors": [
+    { "idx": 0, "kind": "TENSION", "offset": { "x": 0, "y": 0 } }
+  ],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/pulley_wheel.png",
+    "binIcon": "icons/pulley_wheel.svg"
+  },
+  "params": {}
+}

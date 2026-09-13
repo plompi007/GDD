@@ -13,13 +13,18 @@ use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 
+use crate::level_file_format::PlacedPart;
 use crate::part::PartDef;
+
+pub mod conveyor;
+pub mod motor_electric;
+pub mod outlet_power;
 
 /// One `include_str!` per file, matching docs/GDD.md §1.3's initial P0
 /// catalog (5 static + 7 dynamic = 12) plus the two GOAL-category parts
-/// (§1.3 ט) M3 needs to have any win condition to test against. Add new
-/// parts here as later milestones need them, keeping this list in sync
-/// with `data/parts/`.
+/// (§1.3 ט) M3 needs to have any win condition to test against, plus M4's
+/// energy/gear/rope demo parts (§1.3 c/d). Add new parts here as later
+/// milestones need them, keeping this list in sync with `data/parts/`.
 const PART_JSON: &[&str] = &[
     include_str!("../../data/parts/floor_ground.json"),
     include_str!("../../data/parts/plank_wood.json"),
@@ -35,6 +40,12 @@ const PART_JSON: &[&str] = &[
     include_str!("../../data/parts/balloon_lift.json"),
     include_str!("../../data/parts/bin_target.json"),
     include_str!("../../data/parts/goal_zone.json"),
+    include_str!("../../data/parts/outlet_power.json"),
+    include_str!("../../data/parts/motor_electric.json"),
+    include_str!("../../data/parts/gear_small.json"),
+    include_str!("../../data/parts/gear_large.json"),
+    include_str!("../../data/parts/conveyor.json"),
+    include_str!("../../data/parts/pulley_wheel.json"),
 ];
 
 /// All known part definitions, keyed by `part_type`. A `BTreeMap` (not
@@ -86,7 +97,34 @@ pub struct PartsPlugin;
 
 impl Plugin for PartsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(build_registry());
+        app.insert_resource(build_registry()).add_plugins((
+            outlet_power::OutletPowerPlugin,
+            conveyor::ConveyorPlugin,
+        ));
+    }
+}
+
+/// Per-part-type extra components beyond the generic physics body every
+/// part gets from `body_factory::spawn_part` (docs/GDD.md §5.6's "component
+/// = ECS, not trait object" rule: this dispatch is a plain `match`, not a
+/// generic behavior registry — each arm just wires up that one part's own
+/// marker components). Called once per placed part at spawn/reset time.
+pub fn attach_part_behavior(commands: &mut Commands, entity: Entity, def: &PartDef, placed: &PlacedPart) {
+    match def.part_type.as_str() {
+        "outlet_power" => outlet_power::attach(commands, entity, def, placed),
+        "motor_electric" => motor_electric::attach(commands, entity, def, placed),
+        "gear_small" | "gear_large" => {
+            let radius = match def.body.shape {
+                crate::part::ShapeSpec::Ball { radius } => radius,
+                crate::part::ShapeSpec::Box { w, h } => w.min(h) / 2.0,
+            };
+            commands.entity(entity).insert((
+                crate::gear_train::GearNode { radius },
+                crate::gear_train::RotaryState::default(),
+            ));
+        }
+        "conveyor" => conveyor::attach(commands, entity, def),
+        _ => {}
     }
 }
 
@@ -118,6 +156,12 @@ mod tests {
             "balloon_lift",
             "bin_target",
             "goal_zone",
+            "outlet_power",
+            "motor_electric",
+            "gear_small",
+            "gear_large",
+            "conveyor",
+            "pulley_wheel",
         ] {
             assert!(
                 registry.get(part_type).is_some(),

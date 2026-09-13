@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a07_gear_train",
+  "title": "גלגלי שיניים",
+  "chapter": "A_FOUNDATIONS",
+  "order": 7,
+  "difficulty": 2,
+  "goalText": "הפעל את המסוע וגלגל את הכדור לתוך התיבה.",
+  "hints": [
+    "מנוע מסתובב רק כשיש לו חשמל.",
+    "גלגל שיניים קטן צמוד לגדול הופך את כיוון הסיבוב."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -400 },
+    { "id": "outlet", "partType": "outlet_power", "x": -560, "y": 140 },
+    { "id": "motor", "partType": "motor_electric", "x": -500, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": -465, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": -420, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": -150, "y": -50 },
+    { "id": "wall", "partType": "wall_brick", "x": -24, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": -56, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": -230, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "outlet", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": []
+}

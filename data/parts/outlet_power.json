@@ -1,0 +1,24 @@
+{
+  "partType": "outlet_power",
+  "displayKey": "part.outlet_power",
+  "category": "POWER",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 24, "h": 24 }
+  },
+  "tags": [],
+  "ports": [
+    { "id": "elec_out", "dir": "OUT", "energy": "ELECTRIC", "offset": { "x": 0, "y": 0 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/outlet_power.png",
+    "binIcon": "icons/outlet_power.svg"
+  },
+  "params": {
+    "startsOn": { "type": "boolean", "default": true }
+  }
+}
