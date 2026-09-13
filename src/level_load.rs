@@ -44,7 +44,11 @@ pub struct EditorState {
     pub level: LevelFile,
 }
 
-fn spawn_placed_part(commands: &mut Commands, registry: &PartRegistry, placed: &PlacedPart) -> Entity {
+pub(crate) fn spawn_placed_part(
+    commands: &mut Commands,
+    registry: &PartRegistry,
+    placed: &PlacedPart,
+) -> Entity {
     let def = registry.get(&placed.part_type).unwrap_or_else(|| {
         panic!(
             "level {:?} references unknown partType: {}",

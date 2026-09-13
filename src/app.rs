@@ -9,6 +9,7 @@
 use bevy::prelude::*;
 
 use crate::game_state::GameState;
+use crate::input::{EditorInputPlugin, PointerAdapterPlugin};
 use crate::level_file_format::LevelFile;
 use crate::level_load::LevelPlugin;
 use crate::parts::PartsPlugin;
@@ -34,6 +35,8 @@ pub fn main() {
         .add_plugins(PartsPlugin)
         .add_plugins(SimPlugin)
         .add_plugins(LevelPlugin { level })
+        .add_plugins(PointerAdapterPlugin)
+        .add_plugins(EditorInputPlugin)
         .add_plugins(WinConditionsPlugin)
         .insert_resource(ClearColor(Color::srgb_u8(0x14, 0x17, 0x1f)))
         .add_systems(Startup, spawn_camera)
@@ -45,11 +48,13 @@ fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
-/// M5 (real touch input) doesn't exist yet, and there's no keyboard on a
-/// phone — so on Android there would otherwise be no way to ever see the
-/// level actually run. Auto-starts once, ~1s after launch, on every
-/// platform (harmless on desktop; you can still pause/reset with the
-/// keyboard afterward).
+/// There's no real Play button yet (docs/GDD.md §3.1's HUD is M6's job),
+/// and Android has no keyboard for `dev_controls`' Space shortcut — so
+/// without this, there'd be no way to ever see a level run on a phone.
+/// M5 gave editing a real touch/mouse input path (`input::EditorInputPlugin`),
+/// so this now waits long enough to actually use it (drag a part in from
+/// the bin, reposition one) before auto-starting; M6's real Play button
+/// replaces this timer outright.
 fn auto_start_once(
     time: Res<Time>,
     state: Res<State<GameState>>,
@@ -61,7 +66,7 @@ fn auto_start_once(
         return;
     }
     *seconds += time.delta_secs();
-    if *seconds >= 1.0 {
+    if *seconds >= 12.0 {
         next_state.set(GameState::Running);
         *started = true;
     }
