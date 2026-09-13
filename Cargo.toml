@@ -10,19 +10,27 @@ name = "chainworks"
 path = "src/main.rs"
 
 [dependencies]
-# Pinned to the pre-Bevy classic API (nannou 0.20 was rewritten on top of
-# Bevy's ECS — a much larger, less stable surface for a project that only
-# needs a plain window + immediate-mode 2D draw calls).
-nannou = "=0.19.0"
+# Bevy (v1.3 pivot — see docs/GDD.md §2.1a): unlike `nannou`, Bevy natively
+# targets Android/iOS/desktop/web from one codebase, MIT/Apache-2.0 licensed
+# (no GPL entanglement), and still mirrors OpenTIM's module shape (parts as
+# data + systems, a level-loading layer) via its ECS instead of a monolithic
+# Model struct.
+#
+# Pinned to 0.16 (not the latest 0.19.x): bevy_reflect 0.19.x unconditionally
+# requires glam >=0.32, and glam 0.32.1's Serialize/Deserialize impls for
+# BVec3A/BVec4A are written against `serde_core` in a way this serde release
+# doesn't satisfy — a hard compile error with no workaround via our own
+# feature flags (verified: reproduces with bevy_rapier2d defaults trimmed
+# too). bevy_reflect 0.16.x depends on glam 0.29.3, well below the broken
+# line. Revisit this pin once the glam/serde_core split stabilizes upstream.
+bevy = "0.16"
 # "enhanced-determinism" trades a little performance for identical results
 # across platforms/architectures — required by docs/GDD.md §2.6 (golden
-# replay tests must reproduce a solved level bit-for-bit).
-rapier2d = { version = "0.35", features = ["enhanced-determinism"] }
+# replay tests must reproduce a solved level bit-for-bit). This forwards to
+# rapier2d's own `enhanced-determinism` feature. Version matched to bevy 0.16.
+bevy_rapier2d = { version = "0.30", default-features = false, features = ["dim2", "enhanced-determinism"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
-[dev-dependencies]
-md5 = "0.7"
 
 [profile.dev]
 opt-level = 1

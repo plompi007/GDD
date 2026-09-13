@@ -2,15 +2,17 @@
 
 מסמך מפרט פיתוח מלא — משחק פאזל פיזיקלי מבוסס תגובת שרשרת
 
-**גרסה:** 1.2 | **תאריך:** ספטמבר 2026
+**גרסה:** 1.3 | **תאריך:** ספטמבר 2026
 **קהל היעד של המסמך:** סוכן קוד (Claude Code) + המפתח
-**פלטפורמות יעד:** Windows/Mac/Linux קודם (כמו OpenTIM); iOS/Android/Web הם שלב עתידי נפרד — ראה סעיף 7.5
+**פלטפורמות יעד:** דסקטופ (Windows/Mac/Linux) **ואנדרואיד** מוקדם מאוד באותו קוד (Bevy תומך בזה natively) — ראה סעיף 7.5. iOS/Web נשארים בהמשך.
 
 > **הערה משפטית מקדימה:** המסמך הזה מנתח מכניקות משחק (שאינן מוגנות בזכויות יוצרים) ומגדיר יצירה מקורית חדשה. אין להשתמש בשם, בגרפיקה, בצלילים, בשמות הדמויות או בפריסות השלבים של אף משחק קיים. ראה סעיף 4.
 
 > **מה חדש בגרסה 1.1:** (א) חיזוק מפורש של עקרון "**מקסימום נאמנות מכנית/חווייתית ל-TIM, מינימום חפיפה משפטית**" — סעיף 1.1 ו-4.1. (ב) זהות חזותית חדשה — כיוון אמנותי פרימיום ברמת 2026, מחליף את "Timber & Brass" כהמלצה ראשית (הכיוונים הקודמים נשמרו כחלופות מתועדות) — סעיף 4.3. (ג) שפת תנועה, Juice ומערכת עיצוב (design tokens) ברמת גימור של משחק מודרני — סעיף 3.9 החדש.
 
-> **מה חדש בגרסה 1.2 — פיבוט סטאק ל-Rust:** לאחר סקירה ישירה של [OpenTIM](https://github.com/mrfixit2001/OpenTIM) (רה-implementation קוד-פתוח, GPL-3.0, של The Even More! Incredible Machine), הוחלט לעבור מ-TypeScript/Pixi/Capacitor ל-**Rust + nannou + rapier2d, דסקטופ-קודם** — מראה ארכיטקטורת המודולים של OpenTIM עצמה (`part.rs`, `level_file_format.rs`, `atmosphere.rs`) קרובה מאוד למה שהמסמך הזה כבר ביקש (חלוקה ל-parts/level/sim), ורספייר הוא ממילא crate-Rust מקורי — הבינדינגים ל-JS/WASM שהיו בתכנון v1.1 היו שכבת עטיפה מיותרת. **חשוב: זו השראה ארכיטקטונית בלבד — אין תלות או fork בקוד ה-GPL-3.0 של OpenTIM עצמו**, כדי ש-ChainWorks יישאר קניין רוחני עצמאי (ראה §2.1). ראה עדכוני §2.1, §5.5, §7 להרחבה. סעיפים 1, 3, 4 (מכניקה, UX/זהות חזותית, משפטי) נשארים תקפים במלואם — הם בלתי תלויים בשפת המימוש.
+> **מה חדש בגרסה 1.2 — פיבוט סטאק ל-Rust:** לאחר סקירה ישירה של [OpenTIM](https://github.com/mrfixit2001/OpenTIM) (רה-implementation קוד-פתוח, GPL-3.0, של The Even More! Incredible Machine), הוחלט לעבור מ-TypeScript/Pixi/Capacitor ל-**Rust + nannou + rapier2d, דסקטופ-קודם** — מראה ארכיטקטורת המודולים של OpenTIM עצמה (`part.rs`, `level_file_format.rs`, `atmosphere.rs`) קרובה מאוד למה שהמסמך הזה כבר ביקש (חלוקה ל-parts/level/sim), ורספייר הוא ממילא crate-Rust מקורי — הבינדינגים ל-JS/WASM שהיו בתכנון v1.1 היו שכבת עטיפה מיותרת. **חשוב: זו השראה ארכיטקטונית בלבד — אין תלות או fork בקוד ה-GPL-3.0 של OpenTIM עצמו**, כדי ש-ChainWorks יישאר קניין רוחני עצמאי (ראה §2.1). סעיפים 1, 3, 4 (מכניקה, UX/זהות חזותית, משפטי) נשארים תקפים במלואם — הם בלתי תלויים בשפת המימוש.
+
+> **מה חדש בגרסה 1.3 — פיבוט מנוע שני: nannou → Bevy:** המפתח משחק מהאנדרואיד שלו. `nannou` (v1.2) לא תומך במובייל כלל — היה דוחה את האפשרות לשחק בפועל לשלב מאוחר מאוד (M12). **Bevy** הוא מנוע Rust בשל שתומך Android/iOS/Desktop/Web **מאותו קוד** מהיום הראשון, עדיין MIT/Apache-2.0 (אין GPL), ועדיין שומר על אותה ארכיטקטורת מודולים בהשראת OpenTIM — רק דרך ECS (Entities/Components/Systems) של Bevy במקום struct בודד עם update/view. `rapier2d` נשאר, דרך הפלאגין הרשמי `bevy_rapier2d`. **⚠️ הערת גרסאות קריטית:** Bevy 0.19.x (העדכני ביותר בזמן הכתיבה) שבור כרגע מול glam 0.32.1/serde — `bevy_reflect` לא מתקמפל (E0277 על `BVec3A`/`BVec4A`). **מוצמד בכוונה ל-Bevy 0.16 + bevy_rapier2d 0.30** (הזוג היציב האחרון לפני ה-regression, מאומת שמתקמפל ורץ). ראה §2.1a לפירוט המלא ולסימנים לבדוק לפני שמנסים לשדרג בעתיד.
 
 ---
 
@@ -18,15 +20,17 @@
 
 | החלטה | הבחירה | למה |
 |---|---|---|
-| סטאק | **Rust + `nannou` 0.19 (חלון/רינדור) + `rapier2d` (פיזיקה, `enhanced-determinism`) + `serde`/`serde_json`** | דטרמיניזם מובטח מהקופסה (rapier2d הוא Rust מקורי — אין שכבת WASM/JS-bindings), ארכיטקטורה שמראה במדויק את OpenTIM (`part.rs`, `level_file_format.rs`, `atmosphere.rs`) בלי תלות בקוד ה-GPL-3.0 שלהם |
-| מנוע פיזיקה | `rapier2d` (native Rust, feature `enhanced-determinism`) | דטרמיניזם cross-platform מובטח + snapshot/restore מובנה, בלי overhead של WASM. קריטי לפאזל שבו פתרון חייב להיות ניתן לשחזור |
-| ארכיטקטורת ליבה | סימולציה דו-שכבתית: שכבת גופים קשיחים (rapier2d) + שכבת גרף אנרגיה לוגי מעליה | זה הסוד של הז'אנר. חבלים, גלגלי שיניים, חשמל וחום אינם פיזיקה קשיחה — הם רשת סיגנלים. ניסיון לסמלץ חבל כשרשרת גופים = חוסר יציבות ובאגים אינסופיים |
-| Timestep | קבוע 1/120s, accumulator, מקסימום 4 צעדים לפריים | דטרמיניזם + יציבות מפרקים |
+| סטאק | **Rust + `bevy` 0.16 (ECS/רינדור/חלון) + `bevy_rapier2d` 0.30 (פיזיקה, `enhanced-determinism`) + `serde`/`serde_json`** | דטרמיניזם מובטח מהקופסה (rapier2d הוא Rust מקורי), Bevy תומך Android/iOS/Desktop/Web מאותו קוד, ועדיין שומר על ארכיטקטורת מודולים בהשראת OpenTIM (`part.rs`, `level_file_format.rs`, `atmosphere.rs`) — עכשיו כ-ECS Components/Systems — בלי תלות בקוד ה-GPL-3.0 שלהם |
+| מנוע פיזיקה | `bevy_rapier2d` (עוטף `rapier2d` native Rust, feature `enhanced-determinism`) | דטרמיניזם cross-platform מובטח + snapshot/restore מובנה, בלי overhead של WASM. קריטי לפאזל שבו פתרון חייב להיות ניתן לשחזור |
+| ארכיטקטורת ליבה | סימולציה דו-שכבתית: שכבת גופים קשיחים (rapier2d, כ-Bevy Components) + שכבת גרף אנרגיה לוגי מעליה (Bevy Systems/Resources) | זה הסוד של הז'אנר. חבלים, גלגלי שיניים, חשמל וחום אינם פיזיקה קשיחה — הם רשת סיגנלים. ניסיון לסמלץ חבל כשרשרת גופים = חוסר יציבות ובאגים אינסופיים |
+| Timestep | קבוע 1/120s (`TimestepMode::Fixed`), מקסימום 4 substeps | דטרמיניזם + יציבות מפרקים |
 | נתוני שלבים | JSON חיצוני + JSON Schema + `serde` (deserialize + ולידציה ידנית/`jsonschema` crate) | שלבים ניתנים לעריכה בלי לגעת בקוד; Claude Code יכול לייצר שלבים כ-data |
 | **זהות חזותית (v1.1)** | **Prism Foundry — "מעבדה קינטית" פרימיום, וקטור שטוח + עומק אור רך, קידוד צבע לפי סוג אנרגיה** | נראה כמו משחק 2D מקורי שיצא ב-2026 — לא נוסטלגי, לא "משחק אינדי בסיסי". ניטרלי משפטית לחלוטין (אינו מבוסס על שום נכס קיים) |
-| **פלטפורמה (v1.2)** | **דסקטופ קודם (Windows/Mac/Linux), כמו OpenTIM** | `nannou` לא תומך במובייל. עדיפות לזמן-איטרציה מהיר (`cargo run` מקומי) על פני יעד מובייל מיידי. ניוד ל-App Store הוא שלב 2 נפרד — ראה §7.5 |
+| **פלטפורמה (v1.3)** | **דסקטופ + אנדרואיד מוקדם, מאותו קוד Bevy** | המפתח משחק מהאנדרואיד — צריך build שרץ על הטלפון בפועל תוך כמה milestones, לא בסוף. ראה §7.5 |
 
 **חלופה** שנשקלה ונדחתה: הישענות ישירה על ה-crate של OpenTIM עצמו. **נפסלה** — OpenTIM הוא GPL-3.0, ותלות/fork בו הייתה מחייבת את ChainWorks לצאת גם הוא GPL-3.0 (קוד פתוח לגמרי, בלי אפשרות למוצר סגור/בתשלום). הפתרון: מראים את הצורה הארכיטקטונית, כותבים קוד מקורי. ראה §2.1.
+
+**חלופה שנייה שנשקלה ונדחתה (v1.2 → v1.3):** `nannou`. תוצאה נהדרת לדסקטופ בלבד, אבל **לא תומך במובייל בכלל** (בנוי על `winit`+`wgpu` בקונפיגורציית דסקטופ קשיחה) — היה דוחה משחק בפועל על הטלפון לשלב אחרון מאוד. Bevy נבחר במקומו כי הוא תומך Android מהיום הראשון, עדיין Rust, עדיין MIT/Apache-2.0.
 
 ---
 
@@ -263,6 +267,28 @@ for field in activeFields:
 
 **⚠️ אין תלות בקוד של OpenTIM עצמו.** OpenTIM הוא GPL-3.0 — לו ChainWorks תלוי או fork-י בקוד שלו, ChainWorks היה חייב לצאת גם הוא GPL-3.0 (קוד פתוח לגמרי, בלי אפשרות למוצר סגור/מכירה בחנויות בלי לפרסם את כל קוד המקור). ההחלטה: ללמוד מהצורה הארכיטקטונית שלהם (חלוקת מודולים — ראה §5.5) ולכתוב קוד מקורי משלנו מאפס. זה בדיוק כמו העיקרון בסעיף 1.1 לגבי מכניקות משחק — הרעיון/המבנה מותר להשראה, המימוש הקונקרטי חייב להיות מקורי.
 
+### 2.1a מנוע רינדור/חלון — nannou → Bevy (v1.3)
+
+`rapier2d` (§2.1) נשאר ללא שינוי מ-v1.2. מה שהתחלף הוא שכבת החלון/רינדור/ECS שעוטפת אותו:
+
+| מנוע | תמיכת מובייל | ECS/ארגון קוד | רישוי | הכרעה |
+|---|---|---|---|---|
+| **Bevy** | ✅ Android + iOS + Desktop + Web מאותו קוד | ECS מלא (Entities/Components/Systems) | MIT/Apache-2.0 | ✅ **נבחר (v1.3)** |
+| `nannou` | ❌ דסקטופ בלבד (`winit`+`wgpu` בקונפיגורציה קשיחה) | Model/update/view (לא ECS) | MIT/Apache-2.0 | היה נבחר ב-v1.2, נדחה |
+| מימוש חלון/רינדור עצמי (`winit`+`wgpu` ישירות) | ✅ (winit תומך מובייל) | חופשי, אבל את הכול כותבים ידנית | — | יותר מדי עבודה ידנית מול Bevy הבשל |
+
+**הנימוק:** המפתח משחק מהטלפון האנדרואיד שלו. עם `nannou`, "לשחק במשחק" היה נדחה לשלב M12 (אחרי launch דסקטופ מלא) כי `nannou` פשוט לא יודע לרוץ על אנדרואיד — צריך היה להחליף מנוע בכל מקרה מתישהו. Bevy עושה את זה **מהיום הראשון** מאותו קוד, בלי תאריך יעד רחוק. המחיר: Bevy הוא מסגרת ECS גדולה יותר מ-nannou (יותר concepts ללמוד: Components, Systems, Resources, Schedules, Plugins) — אבל זה בדיוק גם היתרון: ECS ממפה טבעי מאוד למודל "רכיב = צומת בגרף עם רכיבים (components) ומערכות (systems) שקוראות אותם" שכל המסמך הזה כבר מתאר (סעיף 1.2), ומחליף בצורה נקייה יותר את ה-trait `PartBehavior` עם ה-virtual dispatch שלו (ראה §5.6 המעודכן).
+
+**איך זה משנה את הארכיטקטורה (§5.5):** מבנה הקבצים (`part.rs`, `level_file_format.rs`, `atmosphere.rs` וכו') נשאר כמעט זהה — זו עדיין השראה מ-OpenTIM. מה שמשתנה זה **מה שבתוך כל קובץ**: strcuts הופכים ל-`#[derive(Component)]`, ולוגיקה שהייתה מתודה על struct (`on_tick`, `on_energy`) הופכת ל-Bevy System שרץ על query של entities עם הרכיבים הרלוונטיים. זה טבעי יותר ל-ECS ופחות boilerplate מ-trait objects.
+
+> ### ⚠️ הערת גרסאות קריטית — אל תשדרג את Bevy בלי לבדוק את זה קודם
+>
+> **מוצמד בכוונה:** `bevy = "0.16"` + `bevy_rapier2d = "0.30"`. **לא** הגרסה העדכנית ביותר (0.19.x / 0.36.x בזמן הכתיבה).
+>
+> **הסיבה:** `bevy_reflect` בגרסאות 0.19.x דורש `glam >= 0.32`, וב-`glam 0.32.1` המימושים של `Serialize`/`Deserialize` עבור `BVec3A`/`BVec4A` כתובים מול ה-trait של `serde_core` באופן שלא מספק את ה-bound שדרוש (`E0277: the trait bound BVec3A: serde::Serialize is not satisfied`) — קורה עם `bevy = "0.19"` בכל קונפיגורציית features שניסינו (כולל `bevy_rapier2d` עם `default-features = false`). זו לא באגיה שלנו לתקן — זה regression ב-ecosystem (כנראה קשור למעבר של serde ל-`serde_core` split) שממתין לתיקון upstream.
+>
+> **לפני שמנסים לשדרג בעתיד:** ודא ש-`cargo build` נקי לפני שמשנים גרסה, ואם נתקלים שוב ב-E0277 על `glam::BVec3A`/`BVec4A` בתוך `bevy_reflect` — זו אותה בעיה. בדוק את `bevy_reflect`'s `Cargo.toml` (`[dependencies.glam]`) בגרסה שאתה שוקל: אם `glam >= 0.32`, ייתכן שהבאג עדיין קיים; חפש גרסת `bevy`/`bevy_rapier2d` תואמת שבה `bevy_reflect` עדיין תלוי ב-`glam < 0.32` (למשל, לבדוק את `bevy_reflect` בהתקנה המקומית: `find ~/.cargo/registry/src -iname "bevy_reflect-*"` ואז `grep glam Cargo.toml`).
+
 ### 2.2 קנה מידה ופרמטרים גלובליים
 
 ```rust
@@ -424,7 +450,7 @@ pub enum FailCondition {
 
 ## 3. התאמה למובייל וממשק משתמש (Mobile UI/UX)
 
-> **הערת סטטוס (v1.2):** הסעיף הזה כולו נכתב סביב קלט מגע/נייד — זו כוונת העיצוב הסופית לשלב המובייל (M12, §7.5). **לשלב הדסקטופ הנוכחי (M0–M11)**, M5 יתאים את אותה כוונת-עיצוב לעכבר+מקלדת (קליק=touch, גרירה=drag, גלגלת עכבר=zoom, קליק ימני=תפריט הקשר במקום ה-tap-menu של 3.4). סעיף 3.9 (שפת תנועה, Juice, זהות חזותית) **כן** תקף במלואו ומיידית — הוא בלתי-תלוי בסוג הקלט. תת-הסעיפים 3.1–3.8 (פריסה, מחוות מגע, haptics, safe-area) הם החוזה ל-M12; אל תממש אותם כלשונם במסכי הדסקטופ של M6.
+> **הערת סטטוס (עודכן ב-v1.3):** הסעיף הזה כולו נכתב סביב קלט מגע/נייד — ועם המעבר ל-Bevy (§2.1a), זו כבר לא "כוונה רחוקה למובייל" אלא **המכשיר שהמפתח עצמו ישחק עליו**, ומיועדת להיות רלוונטית הרבה יותר מוקדם ממה ש-v1.2 הניחה. סדר העבודה בפועל: M5 ("Desktop + touch input") ממש שתי שכבות קלט זו לצד זו מהתחלה — עכבר+מקלדת לפיתוח מהיר על מחשב (קליק=touch, גרירה=drag, גלגלת=zoom), ומחוות מגע אמיתיות (3.2–3.5 כלשונם) לבדיקה על מכשיר אנדרואיד אמיתי החל מ-M7 (§7.5) ולא מחכה ל-M12 כמו שתוכנן קודם. סעיף 3.9 (שפת תנועה, Juice, זהות חזותית) תקף במלואו ומיידית לשתי הפלטפורמות. Bevy מספק את שתי סוגי הקלט (`bevy::input::mouse`, `bevy::input::touch`) דרך אותו מנגנון אירועים — אין צורך בשני code paths נפרדים לגמרי, רק במיפוי מחוות שונה.
 
 ### 3.1 פריסת מסך
 
@@ -1146,38 +1172,38 @@ chainworks/
 ├── assets/
 │   ├── sprites/  icons/  audio/  fonts/
 ├── src/
-│   ├── main.rs                    # nannou::app(model).update(update).run() — M0/M1
+│   ├── main.rs                    # App::new().add_plugins(...).run() — M0/M1 (ראה src/main.rs בפועל)
 │   ├── math.rs                    # PIXELS_PER_METER, Vector helpers, camera transforms
-│   ├── render.rs                  # שכבת רינדור nannou-specific.
-│   │                              #   הערה: OpenTIM קורא לקובץ המקביל `nannou.rs`; כאן
-│   │                              #   `render.rs` כדי לא להתנגש עם ה-extern crate `nannou`
-│   │                              #   עצמו כשכותבים `use nannou::prelude::*;` בתוך הקובץ.
+│   ├── render.rs                  # מערכות רינדור מותאמות (מעבר לספרייט האוטומטי של Bevy):
+│   │                              #   EnergyFlowRenderer (חלקיקי אנרגיה, סעיף 3.9.2), Juice.
+│   │                              #   מיקום/סיבוב בסיסי מתעדכן אוטומטית ע"י Bevy מ-Transform —
+│   │                              #   אין צורך ב-view function ידנית כמו ב-nannou.
 │   ├── debug.rs                   # שכבת דיבוג-אוברליי (כמו OpenTIM `debug.rs`)
 │   ├── atmosphere.rs              # FieldSystem + ThermalSystem: רוח/ואקום/מגנט/חום/אש
 │   │                              #   (כמו OpenTIM `atmosphere.rs` — אותה אחריות, מימוש חדש)
-│   ├── energy_graph.rs            # EnergyGraph: צמתים/קשתות/propagate — "הסוד של הז'אנר"
-│   │                              #   מסעיף 1.1. אין ל-OpenTIM מקבילה בשם הזה; זו תוספת
-│   │                              #   ייחודית ל-ChainWorks (הם משחזרים מנוע ישן, אנחנו לא)
+│   ├── energy_graph.rs            # EnergyGraph כ-Bevy Resource: צמתים/קשתות/propagate —
+│   │                              #   "הסוד של הז'אנר" מסעיף 1.1. אין ל-OpenTIM מקבילה בשם
+│   │                              #   הזה; זו תוספת ייחודית ל-ChainWorks
 │   ├── rope_network.rs            # RopeNetwork: אילוצי מתיחה + ניתוב דרך גלגלות
 │   ├── gear_train.rs              # GearTrain: צימוד גלגלים, יחסים, רצועות
-│   ├── part.rs                    # PartDef, PartInstance, ה-trait PartBehavior
-│   │                              #   (כמו OpenTIM `part.rs`)
-│   ├── parts/                     # מימוש per-part (כמו OpenTIM `parts/`)
-│   │   ├── mod.rs                 # PartRegistry — טוען ורושם את data/parts/*.json
+│   ├── part.rs                    # PartDef כנתוני-Component, Port/Anchor/EnergySignal,
+│   │                              #   marker components לכל קטגוריית רכיב (כמו OpenTIM `part.rs`,
+│   │                              #   אך ECS: ראה §5.6 — behaviors הם Systems, לא טרייט אחד)
+│   ├── parts/                     # מימוש per-part כ-Systems (כמו OpenTIM `parts/`)
+│   │   ├── mod.rs                 # PartRegistry — טוען data/parts/*.json, plugin שרושם Systems
 │   │   ├── fuse_cord.rs  charge_barrel.rs  punch_arm.rs
 │   │   └── conveyor.rs  walker_unit.rs  balloon.rs  ...
 │   ├── level_file_format.rs       # מבני serde התואמים ל-level.schema.json
 │   │                              #   (כמו OpenTIM `level_file_format.rs`)
-│   ├── level_load.rs              # LevelLoader: JSON → EditorState → World
+│   ├── level_load.rs              # LevelLoader: JSON → EditorState → spawn entities בעולם Bevy
 │   │                              #   (כמו OpenTIM `level_load.rs`)
-│   ├── editor_state.rs            # EditorState — המקור היחיד לאמת (סעיף 2.5)
+│   ├── editor_state.rs            # EditorState כ-Bevy Resource — המקור היחיד לאמת (סעיף 2.5)
 │   ├── win_conditions.rs          # WinCondition/FailCondition + evaluate() (סעיף 2.7)
 │   ├── sim/
-│   │   ├── mod.rs
-│   │   ├── physics.rs             # עטיפת rapier2d: RigidBodySet/ColliderSet/Pipeline, step()
-│   │   ├── fixed_step_loop.rs     # לולאת המשחק (סעיף 2.4)
-│   │   ├── body_factory.rs        # PartDef → RigidBody + Collider
-│   │   ├── collision_router.rs    # אירועי מגע → IMPACT
+│   │   ├── mod.rs                 # SimPlugin — קושר את כל ה-Systems לסדר הקבוע בסעיף 2.4,
+│   │   │                          #   בשלב הפיזיקה של bevy_rapier2d (PhysicsSet)
+│   │   ├── body_factory.rs        # PartDef → (RigidBody, Collider) components של bevy_rapier2d
+│   │   ├── collision_router.rs    # CollisionEvent (bevy_rapier2d) → אירועי IMPACT
 │   │   └── collision_groups.rs    # ביטמסקות (סעיף 5.7)
 │   ├── input.rs                   # מקלדת/עכבר לדסקטופ — drag/drop, snap, rope tool (M5).
 │   │                              #   ⚠️ ה-UX המתועד בסעיף 3 נכתב למגע/נייד; ב-M5 יש להתאים
@@ -1194,25 +1220,21 @@ chainworks/
     └── unsolvable.rs       # הצבות אקראיות לא פותרות
 ```
 
-### 5.6 חוזי הליבה (ה-traits/structs שהסוכן מתחיל מהם)
+### 5.6 חוזי הליבה (v1.3 — Bevy ECS: Components + Systems + Resources)
+
+הפער העיקרי מ-v1.2: אין יותר `trait PartBehavior` עם virtual dispatch. ב-ECS, "מה רכיב עושה" מבוטא כ-**Systems שרצים על queries** של רכיבים (components) ספציפיים — זה בדיוק אותו רעיון של "רכיב לא יודע על רכיב אחר, רק פולט/צורך אנרגיה" מסעיף 1.2, רק בסינטקס טבעי יותר ל-Rust/ECS:
 
 ```rust
 // src/part.rs
-#[derive(Debug, Clone, serde::Deserialize)]
-pub enum PartCategory {
-    Static, Dynamic, Mechanism, Power, Pneumatic, Thermal, Light, Actuator, Goal,
-}
-
-#[derive(Debug, Clone, Copy, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
 pub enum Tier { P0, P1, P2 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+/// המידע הסטטי על טיפוס רכיב — נטען מ-data/parts/*.json, לא הרכיב-instance עצמו.
+#[derive(Debug, Clone, serde::Deserialize, bevy::prelude::Resource)]
 pub struct PartDef {
     pub part_type: String,
     pub display_key: String,
-    pub category: PartCategory,
     pub tier: Tier,
-    pub body: BodySpec,
     pub tags: Vec<String>,
     pub wind_factor: Option<f32>,
     pub ports: Vec<Port>,
@@ -1221,30 +1243,49 @@ pub struct PartDef {
     pub params: std::collections::BTreeMap<String, ParamSpec>, // BTreeMap: סדר איטרציה קבוע!
 }
 
-/// כל רכיב ממממש רק את מה שרלוונטי לו — כל מתודה כאן יש לה ברירת מחדל ריקה,
-/// בדיוק כמו ה-`PartBehavior` interface ב-v1.1 (עכשיו trait עם default methods).
-pub trait PartBehavior {
-    fn part_type(&self) -> &'static str;
-    fn on_create(&self, _ctx: &mut SimContext, _inst: &mut PartInstance) {}
-    fn on_tick(&self, _ctx: &mut SimContext, _inst: &mut PartInstance) {}
-    fn on_energy(&self, _ctx: &mut SimContext, _inst: &mut PartInstance, _port: &str, _e: EnergySignal) {}
-    fn on_impact(&self, _ctx: &mut SimContext, _inst: &mut PartInstance, _other: &PartInstance, _speed: f32) {}
-    fn on_destroy(&self, _ctx: &mut SimContext, _inst: &mut PartInstance) {}
+/// Marker components — כל entity שהוא רכיב מקבל את אלה לפי הצורך.
+/// System של רכיב ספציפי (למשל fuse_cord.rs) שואל query על ה-marker שלו,
+/// לא על "כל הרכיבים" — זה מה שמחליף את ה-`on_tick`/`on_energy` הישן.
+#[derive(bevy::prelude::Component)]
+pub struct PartInstance { pub part_type: &'static str, pub id: String }
+
+#[derive(bevy::prelude::Component)]
+pub struct EnergyPorts { pub ports: Vec<Port> }
+
+// src/parts/fuse_cord.rs — דוגמה: כך נראה "behavior" של רכיב ב-ECS
+#[derive(bevy::prelude::Component)]
+pub struct FuseCord { pub burn_progress: f32, pub length: f32 }
+
+/// מקביל ל-onEnergy(THERMAL) + onTick של v1.1/v1.2, כ-System רגיל.
+/// נרשם דרך SimPlugin (sim/mod.rs) בסדר הקבוע של סעיף 2.4.
+pub fn fuse_cord_burn_system(
+    time: Res<Time<Fixed>>,
+    mut fuses: Query<(&mut FuseCord, &EnergyPorts, &Transform)>,
+    mut energy: ResMut<EnergyGraph>,
+) {
+    for (mut fuse, ports, transform) in &mut fuses {
+        if energy.read_thermal_in(&ports) {
+            fuse.burn_progress += 45.0 * time.delta_secs();
+            // ... פליטת THERMAL זמני ברדיוס 8 בנקודת הבעירה, ראה §1.4.3
+        }
+    }
 }
 
 // src/energy_graph.rs
-pub struct EnergyGraph { /* ... */ }
+#[derive(bevy::prelude::Resource, Default)]
+pub struct EnergyGraph { /* צמתים, קשתות — מפתח: String (part id), לא Entity,
+                            כדי שה-JSON של solutions[] (§5.2) יישאר קריא/דטרמיניסטי */ }
 
 impl EnergyGraph {
-    pub fn add_node(&mut self, id: &str, ports: Vec<Port>) { /* ... */ }
     pub fn connect(&mut self, from_node: &str, from_port: &str, to_node: &str, to_port: &str) { /* ... */ }
     pub fn emit(&mut self, node_id: &str, port: &str, signal: EnergySignal) { /* ... */ }
     pub fn read(&self, node_id: &str, port: &str) -> Option<EnergySignal> { /* ... */ }
-    /// מיון טופולוגי; מעגלים נפתרים ב-2 מעברים max.
-    pub fn propagate(&mut self, parts: &mut PartRegistry) { /* ... */ }
-    pub fn clear(&mut self) { /* ... */ }
+    /// מיון טופולוגי; מעגלים נפתרים ב-2 מעברים max. רץ כ-System, ראשון בסדר של §2.4.
+    pub fn propagate(&mut self) { /* ... */ }
 }
 ```
+
+**כלל לסוכן הקוד:** כל רכיב חדש (M2 ואילך) = (1) marker component ב-`part.rs` או בקובץ הרכיב עצמו, (2) system אחד או יותר שנרשמים ל-`SimPlugin`, (3) הגדרת data ב-`data/parts/<part_type>.json`. אל תיצור trait-object registry גנרי — זה בדיוק מה ש-ECS נועד לייתר.
 
 ### 5.7 קבוצות התנגשות
 
@@ -1269,22 +1310,22 @@ pub const PREVIEW_GHOST: Group   = Group::GROUP_6; // לא מתנגש בכלום
 
 | # | Milestone | תוצר | קריטריון קבלה |
 |---|---|---|---|
-| **M0** | **Bootstrap** | **`nannou` + `rapier2d` נטענים, חלון ריק** | **קובייה נופלת על רצפה ב-60fps+ — ✅ הושלם (ראה `src/main.rs`)** |
-| M1 | Sim core | `sim::Physics`, `FixedStepLoop`, `BodyFactory`, `Determinism` | טסט: מצב זהה אחרי 600 ticks, 3 ריצות |
+| **M0** | **Bootstrap** | **`bevy` + `bevy_rapier2d` נטענים, חלון ריק** | **קובייה נופלת על רצפה ב-55–60fps — ✅ הושלם (ראה `src/main.rs`)** |
+| M1 | Sim core | `sim::SimPlugin`, סדר Systems קבוע (§2.4), `body_factory.rs`, טסט דטרמיניזם | מצב זהה אחרי 600 ticks, 3 ריצות |
 | M2 | Part registry + P0 static/dynamic | 12 רכיבים ראשונים מ-data JSON (`part.rs`, `parts/mod.rs`) | טעינת שלב hard-coded, כדורים מתגלגלים על קרשים |
 | M3 | Level loader + win conditions | `level_file_format.rs` (serde), `lvl_a01`, מכונת מצבים, reset | שלב 1 ניתן לפתירה ולאיפוס אינסופי |
+| **M3.5** | **בדיקת אנדרואיד ראשונה (חדש ב-1.3)** | `cargo apk`/`xbuild` — לוקחים בדיוק את מה שיש מ-M3 ובונים APK debug | **רץ בפועל על הטלפון של המפתח** — רואים את השלב, גם בלי קלט מגע עדיין. זו הבדיקה הכי חשובה במסמך: לגלות בעיות Android מוקדם, לא בסוף |
 | M4 | Energy graph + חבלים וגלגלים | `energy_graph.rs`, `rope_network.rs`, `gear_train.rs` | מנוע→גלגל→מסוע עובד. גלגלת מרימה משקולת |
-| M5 | Desktop input | `input.rs`: drag/drop בעכבר, snap, rope tool | אפשר לבנות פתרון שלם בעכבר+מקלדת |
-| M6 | UI shell + Design system | `ui/tokens.rs`, PartsBin, Inspector, HUD, LevelSelect, SpeedSlider — מצוירים ב-nannou draw | זרימה מלאה: תפריט→שלב→פתרון→שלב הבא, בהתאמה מלאה ל-3.9 |
-| M6.5 | **Visual polish pass (v1.1)** | shader/ציור חלקיקי אנרגיה צבועים (§3.9.2), Juice מלא (טבלת 3.9.6), glass HUD | וידאו של שלב שנפתר "מרגיש" כמו טריילר של משחק, לא פרוטוטייפ |
-| M7 | Desktop packaging + CI | GitHub Actions matrix (`ubuntu-latest`/`macos-latest`/`windows-latest`): `cargo build --release`, אריזה ל-`.zip`/`.dmg`/`.AppImage` | בינארי מותקן ורץ בפועל על שלושת הפלטפורמות |
+| M5 | קלט: דסקטופ + מגע יחד | `input.rs`: drag/drop בעכבר לפיתוח מהיר, **ומחוות מגע אמיתיות (§3.2–3.5) לאנדרואיד** | אפשר לבנות פתרון שלם גם בעכבר וגם באצבע על הטלפון |
+| M6 | UI shell + Design system | `ui/tokens.rs`, PartsBin, Inspector, HUD, LevelSelect, SpeedSlider — Bevy UI/Sprite | זרימה מלאה: תפריט→שלב→פתרון→שלב הבא, בהתאמה מלאה ל-3.9, על דסקטופ **ואנדרואיד** |
+| M6.5 | **Visual polish pass (v1.1)** | render systems לחלקיקי אנרגיה צבועים (§3.9.2), Juice מלא (טבלת 3.9.6), haptics אנדרואיד | וידאו של שלב שנפתר "מרגיש" כמו טריילר של משחק, לא פרוטוטייפ |
+| M7 | אריזת דסקטופ + אנדרואיד + CI | GitHub Actions matrix: דסקטופ (`ubuntu`/`macos`/`windows-latest`, `cargo build --release`) **וגם** APK release חתום | בינארי מותקן ורץ בפועל על שלוש מערכות דסקטופ **וגם** APK מותקן מהטלפון |
 | M8 | תוכן | כל 60 שלבים + P0/P1 מלאים + כל `solutions[]` golden tests עוברים ב-CI | — |
 | M9 | Sandbox | מצב חופשי, שמירה, שיתוף שלבים | משתמש יוצר ומשתף שלב |
-| M10 | Desktop release readiness | עמוד itch.io/Steam, אייקונים, צילומי מסך, תיאור | דף הורדה ציבורי חי |
-| M11 | Soft launch (desktop) | פרסום ל-itch.io/GitHub Releases, מעקב באגים, תיקונים | — |
-| M12 | **מובייל / App Store (שלב 2 נפרד)** | ראה §7.5 — כרוך בהחלפת שכבת החלון/רינדור (`nannou` לא תומך במובייל) | — |
+| M10 | Release readiness | עמוד itch.io/Steam לדסקטופ; Data Safety form + נכסי Play Console לאנדרואיד | דף הורדה ציבורי חי + APK ב-Play Console internal track |
+| M11 | Soft launch | דסקטופ: itch.io/GitHub Releases. אנדרואיד: internal testing track → production בהדרגה | מעקב crash rate/retention בשתי הפלטפורמות |
 
-**כלל מעשי:** הרץ CI matrix (שלושת מערכות ההפעלה) כבר מ-M1 ואילך, לא רק ב-M7. באגים ספציפיים לפלטפורמה (נתיבי קבצים, קייסים של אודיו/חלונות) עדיף לגלות כשיש שלב אחד ולא 60.
+**כלל מעשי (מוחלף/מוקדם ב-v1.3):** M3.5 הוא לא "טעם טוב" — הוא באמת החלק הכי חשוב בתוכנית. עד שלא רואים APK רץ בפועל על מכשיר אנדרואיד אמיתי, אי אפשר לדעת אם יש בעיות ספציפיות (הרשאות, ביצועים על GPU מובייל, גודל מסך) — ועדיף לגלות את זה עם שלב אחד ולא 60. גם ב-M1–M2, הרץ CI matrix על כל מערכות ההפעלה (לא רק Linux) לתפוס בעיות פלטפורמה מוקדם.
 
 ### 5.9 תקציב ביצועים
 
@@ -1327,11 +1368,13 @@ pub const PREVIEW_GHOST: Group   = Group::GROUP_6; // לא מתנגש בכלום
 
 ---
 
-## 7. אריזה והוצאה — דסקטופ קודם, מובייל בשלב 2 (Release Pipeline, v1.2)
+## 7. אריזה והוצאה — דסקטופ ואנדרואיד יחד (Release Pipeline, v1.3)
+
+> **עודכן ב-v1.3:** עם המעבר ל-Bevy (§2.1a), אנדרואיד **אינו** שלב 2 נפרד יותר — הוא נבנה ונבדק במקביל לדסקטופ החל מ-M3.5. סעיף 7.5 שונה מהותית לעומת v1.2: הוא כבר לא "מה יקרה כשנגיע לשם", אלא ההוראות הקונקרטיות לבניית APK כבר עכשיו.
 
 ### 7.1 מה יוצא מ-`cargo build --release`
 
-בניגוד לסטאק ה-Capacitor של v1.1 (שהיה צריך לעטוף web build), Rust+nannou מייצר **בינארי נייטיבי אמיתי אחד** לכל פלטפורמה — אין WebView, אין שכבת עטיפה, אין גוטצ'ות WASM/MIME-type. `cargo build --release --target <triple>` נותן:
+בניגוד לסטאק ה-Capacitor של v1.1 (שהיה צריך לעטוף web build), Rust+Bevy מייצר **בינארי נייטיבי אמיתי** לכל פלטפורמה — אין WebView, אין שכבת עטיפה, אין גוטצ'ות WASM/MIME-type. `cargo build --release --target <triple>` נותן:
 
 | פלטפורמה | Target triple | תוצר |
 |---|---|---|
@@ -1392,17 +1435,70 @@ steps:
 
 **טיפ:** לצילום ה-GIF/screenshots — הראה שלב באמצע פתרון עם ה-Juice וקידוד הצבע לפי אנרגיה גלוי בבירור (סעיף 3.9.2), לא מסך תפריט.
 
-### 7.5 מובייל / App Store — שלב 2 נפרד (חשוב לקרוא!)
+### 7.5 אנדרואיד — בנייה מוקדמת, לא שלב 2 (עודכן מהותית ב-v1.3)
 
-זו הנקודה הכי חשובה לגבי ציפיות: **המטרה הסופית שהוגדרה למשחק היא הגעה ל-App Store**, אבל `nannou` (הבחירה שלנו לדסקטופ, בהשראת OpenTIM) **לא תומך במובייל** — הוא בנוי על `winit`+`wgpu` בקונפיגורציה דסקטופ-בלבד. המשמעות המעשית:
+Bevy תומך Android natively דרך `winit`+`wgpu` (backend Vulkan/GLES). **הליבה (`sim/`, `energy_graph.rs`, `part.rs`, `level_*`) לא משתנה כלל בין דסקטופ לאנדרואיד** — זו בדיוק הנקודה של הבחירה ב-Bevy. מה שדורש תשומת לב הוא רק שכבת ה-entry-point והאריזה.
 
-1. **הליבה (`sim/`, `energy_graph.rs`, `part.rs`, `level_*`) נשארת כמעט ללא שינוי.** זה כל הסיבה לארכיטקטורה השכבתית מסעיף 5.5 — הלוגיקה לא תלויה ב-nannou.
-2. **מה שכן יוחלף:** שכבת `render.rs` (חלון/רינדור) ו-`input.rs` (קלט מגע במקום עכבר/מקלדת). שתי אפשרויות מרכזיות כשמגיע הזמן:
-   - **`wgpu` + `winit` ישירות** (בלי nannou) — winit תומך ב-Android/iOS; יותר עבודה ידנית אבל אותה שפה (Rust) ואותו core.
-   - **מעבר למנוע Rust שכבר תומך מובייל** (למשל `bevy`, שכן בנוי על wgpu+winit עם תמיכת מובייל רשמית) — יותר עבודה, אבל אקוסיסטם בשל יותר (input touch, packaging).
-3. **אריזה לחנויות:** ברגע שיש בינארי Android (`.apk`/`.aab` דרך `cargo-apk`/`cargo-ndk`) ו-iOS (Xcode project דרך `cargo-lipo`+ידני) — תהליך ההגשה בפועל (Google Play Console, Apple Developer Program, דירוג גיל, נכסי חנות) זהה למה שתועד ב-v1.1 של המסמך הזה (עלויות $25/$99, keystore, וכו') — זה לא משתנה, רק שכבת ה-build שמובילה לשם.
+**כלי הבנייה: `cargo-apk` (הכי פשוט) או `xbuild` (חוצה-פלטפורמות, כולל iOS בעתיד).** למתחילים עם Bevy על אנדרואיד, `cargo-apk` הוא הנתיב המתועד והפשוט ביותר:
 
-**מסקנה מעשית:** אל תדחה את ה"שלב דסקטופ" בגלל זה — הוא לא זמן מבוזבז. רוב הקוד (הפיזיקה, ה-parts, השלבים, תנאי הניצחון) עובר ישירות לגרסת המובייל בלי שינוי. מה שדורש עבודה חוזרת הוא בדיוק השכבה הדקה שממילא הייתה צריכה עדכון גם ב-v1.1 (Pixi→Capacitor). תזמון ריאלי: להתחיל את שלב המובייל (M12) רק אחרי M11 (soft launch דסקטופ מוצלח) — כדי לוודא שהמשחק עצמו כבר מוכח לפני שמשקיעים בפורט.
+```bash
+# חד-פעמי: התקנת ה-target וה-NDK
+rustup target add aarch64-linux-android
+cargo install cargo-apk
+# דורש Android SDK + NDK מותקנים (ANDROID_HOME / ANDROID_NDK_HOME)
+```
+
+`main.rs` צריך נקודת כניסה עם המאקרו של Bevy לאנדרואיד:
+
+```rust
+#[cfg(target_os = "android")]
+#[bevy_main]
+fn main() { /* אותו App::new()...run() בדיוק כמו בדסקטופ */ }
+
+#[cfg(not(target_os = "android"))]
+fn main() { /* אותו דבר */ }
+```
+
+הגדרות ה-APK (package name, permissions, target/min SDK) נכנסות ל-`[package.metadata.android]` ב-`Cargo.toml`:
+
+```toml
+[package.metadata.android]
+package = "com.yourstudio.chainworks"  # reverse-DNS, לא ניתן לשינוי אחרי פרסום ל-Play!
+apk_label = "ChainWorks"
+target_sdk_version = 35
+min_sdk_version = 26
+```
+
+בנייה מקומית לבדיקה על המכשיר של המפתח (M3.5 ואילך):
+
+```bash
+cargo apk run --release   # בונה APK, מתקין ומריץ על מכשיר מחובר ב-adb (או אמולטור)
+```
+
+### 7.6 CI לאנדרואיד — מצטרף למטריצת הדסקטופ (M7)
+
+```yaml
+# הרחבת ה-matrix מ-§7.2 בעוד job נפרד (בונה על ubuntu-latest, לא צריך macOS/Windows)
+android:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with: { targets: aarch64-linux-android }
+    - uses: android-actions/setup-android@v3
+    - run: cargo install cargo-apk
+    - run: cargo apk build --release
+    # חתימה: keystore מ-GitHub Secrets (בדיוק כמו ב-v1.1 §7 — זה לא השתנה)
+    # העלאה: r0adkll/upload-google-play ל-internal testing track
+```
+
+### 7.7 הגשה בפועל ל-Google Play — זהה למה שכבר תועד
+
+ברגע שיש APK/AAB חתום, תהליך ההגשה עצמו (Google Play Console, $25 חד-פעמי, Data Safety form, דירוג גיל, נכסי חנות — אייקון 512×512, צילומי מסך, תיאור) **זהה לחלוטין** למה שתועד בגרסאות קודמות של המסמך הזה. שום דבר בתהליך המנהלי לא השתנה — רק שכבת ה-build שמובילה לשם, וזמן ההגעה אליו (הרבה יותר מוקדם עכשיו).
+
+**מסלול מומלץ לפני Play Store רשמי:** APK חתום debug מותקן ישירות דרך `adb install` (M3.5–M6) → internal testing track ב-Play Console (M10, בלי review ציבורי, לבדיקה עצמית) → production release (M11, אחרי soft launch מוצלח).
+
+**iOS נשאר שלב נפרד עתידי** (דורש Mac ל-build, חשבון Apple Developer $99/שנה, ותהליך חתימה שונה לגמרי) — לא בדחיפות כרגע כי המפתח לא צריך אותו כדי לשחק בעצמו.
 
 ---
 
