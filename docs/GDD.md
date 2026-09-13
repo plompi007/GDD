@@ -1313,7 +1313,7 @@ pub const PREVIEW_GHOST: Group   = Group::GROUP_6; // לא מתנגש בכלום
 | **M0** | **Bootstrap** | **`bevy` + `bevy_rapier2d` נטענים, חלון ריק** | **קובייה נופלת על רצפה ב-55–60fps — ✅ הושלם (ראה `src/main.rs`)** |
 | M1 | Sim core | `sim::SimPlugin`, סדר Systems קבוע (§2.4), `body_factory.rs`, טסט דטרמיניזם | מצב זהה אחרי 600 ticks, 3 ריצות |
 | **M2** | **Part registry + P0 static/dynamic** | **12 רכיבים ראשונים מ-data JSON (`part.rs`, `parts/mod.rs`)** | **כדור מתגלגל על קרש — ✅ הושלם** |
-| M3 | Level loader + win conditions | `level_file_format.rs` (serde), `lvl_a01`, מכונת מצבים, reset | שלב 1 ניתן לפתירה ולאיפוס אינסופי |
+| **M3** | **Level loader + win conditions** | **`level_file_format.rs` (serde), `lvl_a01_first_roll`, מכונת מצבים, reset** | **שלב 1 ניתן לפתירה ולאיפוס אינסופי — ✅ הושלם (3 סבבי פתרון+איפוס מאומתים בטסט)** |
 | **M3.5** | **בדיקת אנדרואיד ראשונה (חדש ב-1.3)** | `cargo apk`/`xbuild` — לוקחים בדיוק את מה שיש מ-M3 ובונים APK debug | **רץ בפועל על הטלפון של המפתח** — רואים את השלב, גם בלי קלט מגע עדיין. זו הבדיקה הכי חשובה במסמך: לגלות בעיות Android מוקדם, לא בסוף |
 | M4 | Energy graph + חבלים וגלגלים | `energy_graph.rs`, `rope_network.rs`, `gear_train.rs` | מנוע→גלגל→מסוע עובד. גלגלת מרימה משקולת |
 | M5 | קלט: דסקטופ + מגע יחד | `input.rs`: drag/drop בעכבר לפיתוח מהיר, **ומחוות מגע אמיתיות (§3.2–3.5) לאנדרואיד** | אפשר לבנות פתרון שלם גם בעכבר וגם באצבע על הטלפון |

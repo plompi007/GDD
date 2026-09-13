@@ -67,6 +67,14 @@ pub fn spawn_part(
         Sprite::from_color(color, sprite_size),
     ));
 
+    if def.body.sensor {
+        // CollidingEntities only updates from CollisionEvent (docs: bevy_rapier2d
+        // plugin/systems/collider.rs `update_colliding_entities`), which is only
+        // emitted for colliders with ActiveEvents::COLLISION_EVENTS — win_conditions.rs
+        // (M3) reads CollidingEntities on GOAL-category entities to evaluate CONTAINED.
+        entity.insert((Sensor, CollidingEntities::default(), ActiveEvents::COLLISION_EVENTS));
+    }
+
     if def.body.kind == BodyKind::Dynamic {
         entity.insert((
             AdditionalMassProperties::Mass(def.body.mass),

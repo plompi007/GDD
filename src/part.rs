@@ -76,6 +76,11 @@ pub struct BodySpec {
     pub gravity_scale: f32,
     #[serde(default)]
     pub ccd: bool,
+    /// Detects overlap without physical collision response (docs/GDD.md
+    /// §1.3 ט: `bin_target`, `goal_zone`). Not in the original v1.1 sketch
+    /// of this struct — added in M3 because win conditions need it.
+    #[serde(default)]
+    pub sensor: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]

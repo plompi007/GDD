@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a03_pulley_lift",
+  "title": "משיכה מלמעלה",
+  "chapter": "A_FOUNDATIONS",
+  "order": 3,
+  "difficulty": 1,
+  "goalText": "הכנס את כדור העץ לדלי.",
+  "hints": [
+    "כדור כבד שנופל יכול למשוך משהו אחר למעלה.",
+    "גלגלת משנה את כיוון המשיכה."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 45 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 800, "y": 1180 },
+    { "id": "ledge_l", "partType": "plank_wood", "x": 300, "y": 400, "rotation": 0 },
+    { "id": "wall_mid", "partType": "wall_brick", "x": 800, "y": 800, "rotation": 90 },
+    { "id": "bucket", "partType": "bin_target", "x": 1250, "y": 1100 },
+    { "id": "shelf_r", "partType": "plank_wood", "x": 1250, "y": 300, "rotation": 0 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": 300, "y": 360, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [
+    { "partType": "pulley_wheel", "count": 1 },
+    { "partType": "rope", "count": 1 },
+    { "partType": "ball_lead", "count": 1 },
+    { "partType": "lever_seesaw", "count": 1 },
+    { "partType": "plank_wood", "count": 2 }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 600 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    {
+      "label": "גלגלת קלאסית",
+      "parts": [
+        { "id": "s_pul", "partType": "pulley_wheel", "x": 300, "y": 200 },
+        { "id": "s_lead", "partType": "ball_lead", "x": 560, "y": 180 },
+        { "id": "s_pl1", "partType": "plank_wood", "x": 900, "y": 560, "rotation": 20 }
+      ],
+      "connections": [
+        { "id": "c1", "kind": "ROPE", "from": { "partId": "s_lead" },
+          "to": { "partId": "subject" }, "routedThrough": [{ "partId": "s_pul" }],
+          "maxLength": 420 }
+      ],
+      "expectedSolveTick": 480
+    },
+    {
+      "label": "מנוף ומדרון",
+      "parts": [
+        { "id": "s_lev", "partType": "lever_seesaw", "x": 450, "y": 900, "rotation": 0 },
+        { "id": "s_ld2", "partType": "ball_lead", "x": 380, "y": 200 },
+        { "id": "s_pl2", "partType": "plank_wood", "x": 950, "y": 700, "rotation": 25 },
+        { "id": "s_pl3", "partType": "plank_wood", "x": 1150, "y": 900, "rotation": 15 }
+      ],
+      "connections": [],
+      "expectedSolveTick": 620
+    }
+  ]
+}

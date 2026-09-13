@@ -16,8 +16,10 @@ use bevy::prelude::*;
 use crate::part::PartDef;
 
 /// One `include_str!` per file, matching docs/GDD.md §1.3's initial P0
-/// catalog (5 static + 7 dynamic = 12). Add new parts here as M4+ needs
-/// them, keeping this list in sync with `data/parts/`.
+/// catalog (5 static + 7 dynamic = 12) plus the two GOAL-category parts
+/// (§1.3 ט) M3 needs to have any win condition to test against. Add new
+/// parts here as later milestones need them, keeping this list in sync
+/// with `data/parts/`.
 const PART_JSON: &[&str] = &[
     include_str!("../../data/parts/floor_ground.json"),
     include_str!("../../data/parts/plank_wood.json"),
@@ -31,6 +33,8 @@ const PART_JSON: &[&str] = &[
     include_str!("../../data/parts/ball_glass.json"),
     include_str!("../../data/parts/crate_wood.json"),
     include_str!("../../data/parts/balloon_lift.json"),
+    include_str!("../../data/parts/bin_target.json"),
+    include_str!("../../data/parts/goal_zone.json"),
 ];
 
 /// All known part definitions, keyed by `part_type`. A `BTreeMap` (not
@@ -112,6 +116,8 @@ mod tests {
             "ball_glass",
             "crate_wood",
             "balloon_lift",
+            "bin_target",
+            "goal_zone",
         ] {
             assert!(
                 registry.get(part_type).is_some(),

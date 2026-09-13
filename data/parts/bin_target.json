@@ -1,0 +1,21 @@
+{
+  "partType": "bin_target",
+  "displayKey": "part.bin_target",
+  "category": "GOAL",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 64, "h": 64 },
+    "sensor": true
+  },
+  "tags": ["CONTAINER"],
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/bin_target.png",
+    "binIcon": "icons/bin_target.svg"
+  },
+  "params": {}
+}
