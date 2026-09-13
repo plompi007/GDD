@@ -16,4 +16,5 @@ pub mod parts;
 pub mod rope_network;
 pub mod scenes;
 pub mod sim;
+pub mod ui;
 pub mod win_conditions;

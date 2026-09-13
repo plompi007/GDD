@@ -18,12 +18,32 @@ use chainworks::level_file_format::LevelFile;
 use chainworks::level_load::LevelPlugin;
 use chainworks::parts::PartsPlugin;
 use chainworks::sim::{SimPlugin, FIXED_DT};
+use chainworks::ui::parts_bin::BinSlot;
 use chainworks::win_conditions::WinConditionsPlugin;
 
 const LEVEL_JSON: &str = include_str!("../levels/A/lvl_m5_drag_bridge.json");
-const BIN_BUTTON_POS: Vec2 = Vec2::new(0.0, -300.0);
 const DROP_POS: Vec2 = Vec2::new(0.0, 96.0);
 const MAX_TICKS_TO_SOLVE: u32 = 2000;
+
+/// The real bin button is `ui::parts_bin`'s bevy_ui `Button` (M6) — driven
+/// by bevy_ui's own picking backend, which needs a real window/camera this
+/// headless test doesn't have. Spawning just the `BinSlot` + `Interaction`
+/// pair `input::start_bin_drag_system` actually reads (mirroring exactly
+/// what `parts_bin::spawn_parts_bin` would create for this level's single
+/// bin entry) exercises that same consumption code without needing the
+/// full UI/asset/rendering stack.
+fn spawn_bin_slot_for_test(app: &mut App, part_type: &str, bin_index: usize) -> Entity {
+    app.world_mut()
+        .spawn((
+            BinSlot {
+                part_type: part_type.to_string(),
+                bin_index,
+            },
+            Button,
+            Interaction::default(),
+        ))
+        .id()
+}
 
 fn build_app() -> App {
     let level: LevelFile = serde_json::from_str(LEVEL_JSON).expect("demo level JSON must be valid");
@@ -40,32 +60,36 @@ fn build_app() -> App {
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
             FIXED_DT as f64,
         )));
-    // Lets the initial `OnEnter(Edit)` spawn (level parts + bin buttons)
-    // fire before any pointer/state changes are requested — same reasoning
-    // as tests/level_solvable.rs's `build_app`.
+    // Lets the initial `OnEnter(Edit)` spawn (level parts) fire before any
+    // pointer/state changes are requested — same reasoning as
+    // tests/level_solvable.rs's `build_app`.
     app.update();
     app
 }
 
-fn set_pointer(app: &mut App, world_pos: Vec2, just_pressed: bool, pressed: bool, just_released: bool) {
+fn set_pointer(app: &mut App, world_pos: Vec2, pressed: bool, just_released: bool) {
     let mut pointer = app.world_mut().resource_mut::<PointerState>();
     pointer.world_pos = Some(world_pos);
-    pointer.just_pressed = just_pressed;
     pointer.pressed = pressed;
     pointer.just_released = just_released;
 }
 
-/// Simulates: press on the (only) bin button, drag to the drop point,
-/// release — exactly the gesture a real mouse-drag or touch-drag performs,
-/// just replayed through `PointerState` instead of a real window/OS input.
-fn drag_plank_from_bin_to(app: &mut App, drop_pos: Vec2) {
-    set_pointer(app, BIN_BUTTON_POS, true, true, false);
+/// Simulates: press the (only) bin button, drag to the drop point, release
+/// — exactly the gesture a real mouse-drag or touch-drag performs. The
+/// button press itself goes through a real `Interaction::Pressed` (see
+/// [`spawn_bin_slot_for_test`]); everything from there on replays through
+/// `PointerState`, same as a real mouse-drag or touch-drag would.
+fn drag_plank_from_bin_to(app: &mut App, bin_slot: Entity, drop_pos: Vec2) {
+    set_pointer(app, drop_pos, true, false);
+    app.world_mut()
+        .entity_mut(bin_slot)
+        .insert(Interaction::Pressed);
     app.update();
-    set_pointer(app, drop_pos, false, true, false);
+    app.world_mut().entity_mut(bin_slot).insert(Interaction::None);
     app.update();
-    set_pointer(app, drop_pos, false, false, true);
+    set_pointer(app, drop_pos, false, true);
     app.update();
-    set_pointer(app, drop_pos, false, false, false);
+    set_pointer(app, drop_pos, false, false);
     app.update();
 }
 
@@ -85,7 +109,8 @@ fn run_until_solved(app: &mut App, max_ticks: u32) -> bool {
 #[test]
 fn dragging_a_plank_from_the_bin_lets_the_level_solve() {
     let mut app = build_app();
-    drag_plank_from_bin_to(&mut app, DROP_POS);
+    let bin_slot = spawn_bin_slot_for_test(&mut app, "plank_wood", 0);
+    drag_plank_from_bin_to(&mut app, bin_slot, DROP_POS);
     assert!(
         run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
         "level did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks after placing the plank"
@@ -118,7 +143,8 @@ fn without_placing_anything_the_level_fails() {
 #[test]
 fn placing_a_plank_consumes_it_from_the_parts_bin() {
     let mut app = build_app();
-    drag_plank_from_bin_to(&mut app, DROP_POS);
+    let bin_slot = spawn_bin_slot_for_test(&mut app, "plank_wood", 0);
+    drag_plank_from_bin_to(&mut app, bin_slot, DROP_POS);
     let editor_state = app
         .world()
         .resource::<chainworks::level_load::EditorState>();

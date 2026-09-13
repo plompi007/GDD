@@ -1,5 +1,4 @@
-//! The actual app: builds the `App`, loads the current demo level, and
-//! adds temporary controls standing in for the real Play/Reset UI (M6).
+//! The actual app: builds the `App` and loads the current demo level.
 //!
 //! This lives in the library crate (not `src/main.rs`) because Android
 //! needs `#[bevy_main]` on a function called `main` compiled into the
@@ -14,6 +13,7 @@ use crate::level_file_format::LevelFile;
 use crate::level_load::LevelPlugin;
 use crate::parts::PartsPlugin;
 use crate::sim::SimPlugin;
+use crate::ui::UiShellPlugin;
 use crate::win_conditions::WinConditionsPlugin;
 
 const DEMO_LEVEL_JSON: &str = include_str!("../levels/A/lvl_a01_first_roll.json");
@@ -37,10 +37,11 @@ pub fn main() {
         .add_plugins(LevelPlugin { level })
         .add_plugins(PointerAdapterPlugin)
         .add_plugins(EditorInputPlugin)
+        .add_plugins(UiShellPlugin)
         .add_plugins(WinConditionsPlugin)
         .insert_resource(ClearColor(Color::srgb_u8(0x14, 0x17, 0x1f)))
         .add_systems(Startup, spawn_camera)
-        .add_systems(Update, (auto_start_once, dev_controls, log_state_and_fps))
+        .add_systems(Update, (dev_controls, log_state_and_fps))
         .run();
 }
 
@@ -48,33 +49,11 @@ fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
-/// There's no real Play button yet (docs/GDD.md §3.1's HUD is M6's job),
-/// and Android has no keyboard for `dev_controls`' Space shortcut — so
-/// without this, there'd be no way to ever see a level run on a phone.
-/// M5 gave editing a real touch/mouse input path (`input::EditorInputPlugin`),
-/// so this now waits long enough to actually use it (drag a part in from
-/// the bin, reposition one) before auto-starting; M6's real Play button
-/// replaces this timer outright.
-fn auto_start_once(
-    time: Res<Time>,
-    state: Res<State<GameState>>,
-    mut next_state: ResMut<NextState<GameState>>,
-    mut started: Local<bool>,
-    mut seconds: Local<f32>,
-) {
-    if *started || *state.get() != GameState::Edit {
-        return;
-    }
-    *seconds += time.delta_secs();
-    if *seconds >= 12.0 {
-        next_state.set(GameState::Running);
-        *started = true;
-    }
-}
-
-/// Temporary stand-in for the real Play/Reset UI (M6). Space toggles
-/// Running/Edit; R forces a reset back to Edit from any state. Desktop
-/// only in practice (no keyboard on a phone) — see [`auto_start_once`].
+/// Desktop power-user shortcuts alongside `ui::hud`'s real Play/Stop/Reset
+/// button (M6) — Space mirrors the main button's own cycle, R force-resets
+/// from any state. Not the only way to control the game anymore, just a
+/// convenience; there's no touch equivalent (a phone has no keyboard),
+/// which is fine now that the real button covers both.
 fn dev_controls(
     keys: Res<ButtonInput<KeyCode>>,
     state: Res<State<GameState>>,

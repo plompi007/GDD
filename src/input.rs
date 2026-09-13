@@ -4,14 +4,12 @@
 //! input layer, mapped differently" framing.
 //!
 //! Editing only runs in `GameState::Edit` (CLAUDE.md rule 4: `EditorState`
-//! is read-only once `Running`). Scope note: this is the M5 *input
-//! mechanics* milestone — the bin buttons drawn here are placeholder flat
-//! rectangles standing in for the real HUD/PartsBin chrome docs/GDD.md §3.1
-//! describes, which is M6's job. Likewise rotate/flip/inspector/delete
-//! (§3.4) and camera pan/zoom (§3.6) are UI chrome or separate polish, not
-//! implemented here — placing a new part from the bin and repositioning an
-//! already-placed one is the mechanic this milestone proves works
-//! identically on mouse and touch.
+//! is read-only once `Running`). Scope note: rotate/flip/inspector/delete
+//! (§3.4), the rope/belt connect tool (§3.5), and camera pan/zoom (§3.6)
+//! are UI chrome or separate polish, not implemented here — placing a new
+//! part from the bin (`crate::ui::parts_bin::BinSlot`, M6's real bevy_ui
+//! chrome) and repositioning an already-placed one is the mechanic this
+//! module proves works identically on mouse and touch.
 
 use bevy::input::touch::Touches;
 use bevy::prelude::*;
@@ -21,22 +19,12 @@ use crate::game_state::GameState;
 use crate::level_file_format::PlacedPart;
 use crate::level_load::{spawn_placed_part, EditorState, LevelEntity, PlacedId};
 use crate::parts::PartRegistry;
+use crate::ui::parts_bin::BinSlot;
 
 /// docs/GDD.md §3.3 priority 4 ("Grid snap, always") — the one snap tier
 /// this milestone implements; anchor/mesh/surface snap priorities 1-3 are
 /// UX polish layered on top later, not required for placement to work.
 const GRID_SNAP: f32 = 16.0;
-
-const BIN_BUTTON_SIZE: f32 = 48.0;
-const BIN_BUTTON_GAP: f32 = 8.0;
-/// Placeholder HUD position (docs/GDD.md §3.1's real bottom bar is screen-
-/// space HUD, built in M6) — a fixed row in *world* space instead, so this
-/// milestone's hit-testing can share one coordinate space with placed
-/// parts rather than needing both screen- and world-space picking at once.
-/// Kept within the default (unzoomed, unpanned — M5 doesn't implement
-/// camera control) viewport of a ~900×700 window so it's actually
-/// clickable/tappable in the real app, not just in headless tests.
-const BIN_ROW_Y: f32 = -300.0;
 
 /// Good enough for M5's "can I grab this part" check across every P0
 /// part's collider; exact per-shape picking is a later refinement.
@@ -98,62 +86,7 @@ fn update_pointer_from_mouse(
 }
 
 #[derive(Component)]
-struct BinButtonEntity {
-    part_type: String,
-    bin_index: usize,
-}
-
-#[derive(Component)]
 struct PlacedGhost;
-
-/// Rebuilds the placeholder bin row from `EditorState.level.partsBin`
-/// (docs/GDD.md §5.1) whenever `Edit` is (re-)entered — same lifecycle as
-/// `level_load::reset_level`'s own respawn.
-fn spawn_bin_buttons(
-    mut commands: Commands,
-    state: Res<EditorState>,
-    existing: Query<Entity, With<BinButtonEntity>>,
-) {
-    for entity in &existing {
-        commands.entity(entity).despawn();
-    }
-    let count = state.level.parts_bin.len();
-    let total_width =
-        count as f32 * BIN_BUTTON_SIZE + count.saturating_sub(1) as f32 * BIN_BUTTON_GAP;
-    let start_x = -total_width / 2.0 + BIN_BUTTON_SIZE / 2.0;
-    for (index, entry) in state.level.parts_bin.iter().enumerate() {
-        let x = start_x + index as f32 * (BIN_BUTTON_SIZE + BIN_BUTTON_GAP);
-        commands.spawn((
-            BinButtonEntity {
-                part_type: entry.part_type.clone(),
-                bin_index: index,
-            },
-            Transform::from_xyz(x, BIN_ROW_Y, 50.0),
-            Sprite::from_color(Color::srgb_u8(0x3a, 0x40, 0x55), Vec2::splat(BIN_BUTTON_SIZE)),
-        ));
-    }
-}
-
-/// Dims a bin button once its remaining count hits zero — the only visual
-/// feedback this placeholder gives; real iconography/count text is M6.
-fn sync_bin_button_visuals(
-    state: Res<EditorState>,
-    mut buttons: Query<(&BinButtonEntity, &mut Sprite)>,
-) {
-    for (button, mut sprite) in &mut buttons {
-        let remaining = state
-            .level
-            .parts_bin
-            .get(button.bin_index)
-            .map(|entry| entry.count)
-            .unwrap_or(0);
-        sprite.color = if remaining == 0 {
-            Color::srgba(0.2, 0.2, 0.24, 0.4)
-        } else {
-            Color::srgb_u8(0x3a, 0x40, 0x55)
-        };
-    }
-}
 
 enum DragSource {
     FromBin { part_type: String, bin_index: usize },
@@ -163,23 +96,10 @@ enum DragSource {
 #[derive(Resource, Default)]
 struct DragState(Option<DragSource>);
 
-fn hit_test_bin_button(
-    pointer_pos: Vec2,
-    buttons: &Query<(&BinButtonEntity, &Transform)>,
-) -> Option<(String, usize)> {
-    buttons
-        .iter()
-        .find(|(_, transform)| {
-            Rect::from_center_size(transform.translation.truncate(), Vec2::splat(BIN_BUTTON_SIZE))
-                .contains(pointer_pos)
-        })
-        .map(|(button, _)| (button.part_type.clone(), button.bin_index))
-}
-
 fn hit_test_placed_part(
     pointer_pos: Vec2,
     state: &EditorState,
-    placed: &Query<(Entity, &PlacedId, &Transform), (With<LevelEntity>, Without<BinButtonEntity>, Without<PlacedGhost>)>,
+    placed: &Query<(Entity, &PlacedId, &Transform), (With<LevelEntity>, Without<PlacedGhost>)>,
 ) -> Option<Entity> {
     placed
         .iter()
@@ -194,14 +114,59 @@ fn hit_test_placed_part(
         .map(|(entity, _, _)| entity)
 }
 
-fn start_drag_system(
-    pointer: Res<PointerState>,
+/// A press on a real `ui::parts_bin::BinSlot` button starts a from-bin
+/// drag — read from bevy_ui's own `Interaction` (driven by its picking
+/// backend against the real cursor/touch), not `PointerState`: once the
+/// drag leaves the button's screen bounds, `Interaction` stops tracking
+/// it, which is exactly why the rest of the drag (below) runs on
+/// `PointerState` instead.
+fn start_bin_drag_system(
     mut drag: ResMut<DragState>,
+    pointer: Res<PointerState>,
     editor_state: Res<EditorState>,
     registry: Res<PartRegistry>,
     mut commands: Commands,
-    bin_buttons: Query<(&BinButtonEntity, &Transform)>,
-    placed: Query<(Entity, &PlacedId, &Transform), (With<LevelEntity>, Without<BinButtonEntity>, Without<PlacedGhost>)>,
+    bin_slots: Query<(&BinSlot, &Interaction), Changed<Interaction>>,
+) {
+    if drag.0.is_some() {
+        return;
+    }
+    let Some((slot, _)) = bin_slots
+        .iter()
+        .find(|(_, interaction)| **interaction == Interaction::Pressed)
+    else {
+        return;
+    };
+    let available = editor_state
+        .level
+        .parts_bin
+        .get(slot.bin_index)
+        .map(|entry| entry.count)
+        .unwrap_or(0);
+    if available == 0 {
+        return;
+    }
+    if let (Some(def), Some(world_pos)) = (registry.get(&slot.part_type), pointer.world_pos) {
+        commands.spawn((
+            PlacedGhost,
+            Transform::from_translation(world_pos.extend(60.0)),
+            Sprite::from_color(
+                crate::sim::body_factory::placeholder_color(def).with_alpha(0.6),
+                Vec2::splat(32.0),
+            ),
+        ));
+    }
+    drag.0 = Some(DragSource::FromBin {
+        part_type: slot.part_type.clone(),
+        bin_index: slot.bin_index,
+    });
+}
+
+fn start_existing_part_drag_system(
+    pointer: Res<PointerState>,
+    mut drag: ResMut<DragState>,
+    editor_state: Res<EditorState>,
+    placed: Query<(Entity, &PlacedId, &Transform), (With<LevelEntity>, Without<PlacedGhost>)>,
 ) {
     if !pointer.just_pressed || drag.0.is_some() {
         return;
@@ -209,31 +174,6 @@ fn start_drag_system(
     let Some(world_pos) = pointer.world_pos else {
         return;
     };
-
-    if let Some((part_type, bin_index)) = hit_test_bin_button(world_pos, &bin_buttons) {
-        let available = editor_state
-            .level
-            .parts_bin
-            .get(bin_index)
-            .map(|entry| entry.count)
-            .unwrap_or(0);
-        if available == 0 {
-            return;
-        }
-        if let Some(def) = registry.get(&part_type) {
-            commands.spawn((
-                PlacedGhost,
-                Transform::from_translation(world_pos.extend(60.0)),
-                Sprite::from_color(
-                    crate::sim::body_factory::placeholder_color(def).with_alpha(0.6),
-                    Vec2::splat(32.0),
-                ),
-            ));
-        }
-        drag.0 = Some(DragSource::FromBin { part_type, bin_index });
-        return;
-    }
-
     if let Some(entity) = hit_test_placed_part(world_pos, &editor_state, &placed) {
         drag.0 = Some(DragSource::ExistingPart { entity });
     }
@@ -363,12 +303,11 @@ impl Plugin for EditorInputPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PointerState>()
             .init_resource::<DragState>()
-            .add_systems(OnEnter(GameState::Edit), spawn_bin_buttons)
             .add_systems(
                 Update,
                 (
-                    sync_bin_button_visuals,
-                    start_drag_system,
+                    start_bin_drag_system,
+                    start_existing_part_drag_system,
                     update_drag_system,
                     end_drag_system,
                 )
