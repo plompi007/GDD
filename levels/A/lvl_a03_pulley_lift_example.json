@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "id": "lvl_a03_pulley_lift",
-  "title": "משיכה מלמעלה",
+  "title": "Pulling From Above",
   "chapter": "A_FOUNDATIONS",
   "order": 3,
   "difficulty": 1,
-  "goalText": "הכנס את כדור העץ לדלי.",
+  "goalText": "Get the wood ball into the bucket.",
   "hints": [
-    "כדור כבד שנופל יכול למשוך משהו אחר למעלה.",
-    "גלגלת משנה את כיוון המשיכה."
+    "A heavy ball falling can pull something else up.",
+    "A pulley changes the direction of pull."
   ],
   "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 45 },
   "fixedParts": [
@@ -37,7 +37,7 @@
   ],
   "solutions": [
     {
-      "label": "גלגלת קלאסית",
+      "label": "Classic pulley",
       "parts": [
         { "id": "s_pul", "partType": "pulley_wheel", "x": 300, "y": 200 },
         { "id": "s_lead", "partType": "ball_lead", "x": 560, "y": 180 },
@@ -51,7 +51,7 @@
       "expectedSolveTick": 480
     },
     {
-      "label": "מנוף ומדרון",
+      "label": "Lever and slope",
       "parts": [
         { "id": "s_lev", "partType": "lever_seesaw", "x": 450, "y": 900, "rotation": 0 },
         { "id": "s_ld2", "partType": "ball_lead", "x": 380, "y": 200 },

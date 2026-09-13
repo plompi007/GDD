@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "id": "lvl_a07_gear_train",
-  "title": "גלגלי שיניים",
+  "title": "Gear Train",
   "chapter": "A_FOUNDATIONS",
   "order": 7,
   "difficulty": 2,
-  "goalText": "הפעל את המסוע וגלגל את הכדור לתוך התיבה.",
+  "goalText": "Power the conveyor and roll the ball into the bin.",
   "hints": [
-    "מנוע מסתובב רק כשיש לו חשמל.",
-    "גלגל שיניים קטן צמוד לגדול הופך את כיוון הסיבוב."
+    "A motor only spins when it has power.",
+    "A small gear meshed with a large one reverses the spin direction."
   ],
   "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
   "fixedParts": [

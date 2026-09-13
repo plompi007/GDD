@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "id": "lvl_m5_drag_bridge",
-  "title": "הגשר החסר",
+  "title": "The Missing Bridge",
   "chapter": "A_FOUNDATIONS",
   "order": 5,
   "difficulty": 1,
-  "goalText": "גרור קרש מארגז החלקים כדי לתפוס את הכדור הנופל.",
+  "goalText": "Drag a plank from the parts bin to catch the falling ball.",
   "hints": [
-    "בלי משהו שיתפוס אותו, הכדור פשוט ייפול."
+    "Without something to catch it, the ball just falls."
   ],
   "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 10 },
   "fixedParts": [

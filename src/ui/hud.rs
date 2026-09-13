@@ -25,20 +25,20 @@ struct MainButton;
 #[derive(Component)]
 struct MainButtonLabel;
 
-/// Plain text, not icon+text (docs/GDD.md §3.1's "▶ הפעל" mockup uses a
+/// Plain text, not icon+text (docs/GDD.md §3.1's "▶ Play" mockup uses a
 /// glyph for compactness in ASCII art) — real icons are stroke-based SVG
-/// assets per §3.9.7, not arbitrary Unicode symbols the bundled font's
-/// Hebrew+Latin+digit subset was never asked to cover.
+/// assets per §3.9.7, not arbitrary Unicode symbols outside the bundled
+/// font's standard Latin coverage.
 fn main_button_label(state: GameState) -> &'static str {
     match state {
-        GameState::Edit => "הפעל",
-        GameState::Running => "עצור",
-        GameState::Paused | GameState::Solved | GameState::Failed => "אפס",
+        GameState::Edit => "Play",
+        GameState::Running => "Stop",
+        GameState::Paused | GameState::Solved | GameState::Failed => "Reset",
     }
 }
 
 /// docs/GDD.md §3.1: the main button cycles Edit → Running → Paused →
-/// (back to) Edit — "הפעל → עצור → אפס" — regardless of Solved/Failed,
+/// (back to) Edit — "Play → Stop → Reset" — regardless of Solved/Failed,
 /// which also reset back to Edit on the next press (same as the old
 /// `dev_controls` keyboard shortcut this replaces).
 fn next_state_for_main_button(state: GameState) -> GameState {

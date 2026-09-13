@@ -63,9 +63,8 @@ pub fn energy_color(energy: EnergyType) -> Color {
     }
 }
 
-/// docs/GDD.md §3.9.7: Hebrew-capable UI font (Rubik, OFL-licensed — see
-/// `assets/fonts/OFL.txt`), subset to the Hebrew alphabet + Latin + basic
-/// punctuation (every level/part JSON string this repo ships uses only
-/// those — `tests/ui.rs` checks new content doesn't silently exceed it).
+/// docs/GDD.md §3.9.7 UI font — Rubik (OFL-licensed, see
+/// `assets/fonts/OFL.txt`), standard full-Latin build. All game content
+/// (level/part JSON, UI labels) is English.
 pub const UI_FONT_MEDIUM: &str = "fonts/Rubik-Medium.ttf";
 pub const UI_FONT_REGULAR: &str = "fonts/Rubik-Regular.ttf";
