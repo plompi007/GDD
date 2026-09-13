@@ -39,9 +39,13 @@ jobs:
       - name: Install cargo-apk
         run: cargo install cargo-apk
 
-      - name: Install Android NDK
+      - name: Install Android NDK + platform
         run: |
           sdkmanager --install "ndk;26.1.10909125"
+          # cargo-apk needs an SDK platform (android.jar, aapt) to build
+          # against regardless of Cargo.toml's own target_sdk_version —
+          # "platforms;android-30" is what it looks for by default.
+          sdkmanager --install "platforms;android-30"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
       - name: Build debug APK
