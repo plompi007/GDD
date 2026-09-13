@@ -1,0 +1,61 @@
+name: Desktop build + test (M7)
+
+# docs/GDD.md §7.2: the three desktop OSes CI actually verifies against —
+# `cargo build --release` alone doesn't catch OS-specific breakage
+# (windowing/audio backend differences, path handling), so this also runs
+# the full test suite on each OS, not just Linux (where all prior
+# milestones were developed and tested locally).
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - "**"
+    paths:
+      - "src/**"
+      - "data/**"
+      - "levels/**"
+      - "assets/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/desktop.yml"
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # docs/GDD.md's own M0 dependency list — Bevy's Linux windowing/audio/
+      # GPU backends need these present at build+link time; macOS/Windows
+      # runners ship the equivalent frameworks already.
+      - name: Install Linux windowing/audio/GPU dev libraries
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxkbcommon-dev libwayland-dev libudev-dev \
+            libasound2-dev libxi-dev libgl1-mesa-dev libvulkan-dev
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Run test suite (headless — no GPU/display needed)
+        run: cargo test --release --target ${{ matrix.target }}
