@@ -17,6 +17,7 @@ use crate::level_file_format::PlacedPart;
 use crate::part::PartDef;
 
 pub mod conveyor;
+pub mod lever_seesaw;
 pub mod motor_electric;
 pub mod outlet_power;
 
@@ -46,6 +47,8 @@ const PART_JSON: &[&str] = &[
     include_str!("../../data/parts/gear_large.json"),
     include_str!("../../data/parts/conveyor.json"),
     include_str!("../../data/parts/pulley_wheel.json"),
+    include_str!("../../data/parts/springboard.json"),
+    include_str!("../../data/parts/lever_seesaw.json"),
 ];
 
 /// All known part definitions, keyed by `part_type`. A `BTreeMap` (not
@@ -124,6 +127,7 @@ pub fn attach_part_behavior(commands: &mut Commands, entity: Entity, def: &PartD
             ));
         }
         "conveyor" => conveyor::attach(commands, entity, def),
+        "lever_seesaw" => lever_seesaw::attach(commands, entity, Vec2::new(placed.x, placed.y)),
         _ => {}
     }
 }
@@ -162,6 +166,8 @@ mod tests {
             "gear_large",
             "conveyor",
             "pulley_wheel",
+            "springboard",
+            "lever_seesaw",
         ] {
             assert!(
                 registry.get(part_type).is_some(),
