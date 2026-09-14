@@ -4,6 +4,7 @@
 //! exact same code paths as the real game, not a reimplementation.
 
 pub mod app;
+pub mod atmosphere;
 pub mod energy_graph;
 pub mod game_state;
 pub mod gear_train;

@@ -1,0 +1,25 @@
+{
+  "partType": "cutter_shears",
+  "displayKey": "part.cutter_shears",
+  "category": "ACTUATOR",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 32, "h": 32 },
+    "sensor": true
+  },
+  "tags": [],
+  "cutRadius": 70,
+  "ports": [
+    { "id": "elec_in", "dir": "IN", "energy": "ELECTRIC", "offset": { "x": 0, "y": 0 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 15,
+    "flippable": false,
+    "sprite": "parts/cutter_shears.png",
+    "binIcon": "icons/cutter_shears.svg"
+  },
+  "params": {}
+}

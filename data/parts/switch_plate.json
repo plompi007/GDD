@@ -1,0 +1,26 @@
+{
+  "partType": "switch_plate",
+  "displayKey": "part.switch_plate",
+  "category": "POWER",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 64, "h": 12 },
+    "sensor": true
+  },
+  "tags": [],
+  "ports": [
+    { "id": "elec_out", "dir": "OUT", "energy": "ELECTRIC", "offset": { "x": 0, "y": 0 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 15,
+    "flippable": false,
+    "sprite": "parts/switch_plate.png",
+    "binIcon": "icons/switch_plate.svg"
+  },
+  "params": {
+    "mode": { "type": "enum", "values": ["toggle", "momentary"], "default": "momentary" }
+  }
+}

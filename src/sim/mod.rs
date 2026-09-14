@@ -12,12 +12,14 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
+use crate::atmosphere::AtmospherePlugin;
 use crate::energy_graph::EnergyGraphPlugin;
 use crate::gear_train::GearTrainPlugin;
 use crate::math::PIXELS_PER_METER;
 use crate::rope_network::RopeNetworkPlugin;
 
 pub mod body_factory;
+pub mod collision_router;
 
 /// Fixed physics timestep (docs/GDD.md §2.2). Simulation/graph code must
 /// never read a real frame delta instead of this — see CLAUDE.md rule 2.
@@ -68,7 +70,13 @@ impl Plugin for SimPlugin {
                 RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(PIXELS_PER_METER)
                     .in_fixed_schedule(),
             )
-            .add_plugins((EnergyGraphPlugin, GearTrainPlugin, RopeNetworkPlugin))
+            .add_plugins((
+                EnergyGraphPlugin,
+                GearTrainPlugin,
+                RopeNetworkPlugin,
+                AtmospherePlugin,
+                collision_router::CollisionRouterPlugin,
+            ))
             .configure_sets(
                 FixedUpdate,
                 (

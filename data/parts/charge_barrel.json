@@ -1,0 +1,29 @@
+{
+  "partType": "charge_barrel",
+  "displayKey": "part.charge_barrel",
+  "category": "THERMAL",
+  "tier": "P0",
+  "body": {
+    "type": "dynamic",
+    "shape": { "kind": "ball", "radius": 20 },
+    "mass": 2.5,
+    "restitution": 0.10,
+    "friction": 0.6
+  },
+  "tags": [],
+  "blastPower": 900,
+  "blastRadius": 150,
+  "ports": [
+    { "id": "thermal_in", "dir": "IN", "energy": "THERMAL", "offset": { "x": 0, "y": 20 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/charge_barrel.png",
+    "binIcon": "icons/charge_barrel.svg"
+  },
+  "params": {
+    "power": { "type": "number", "min": 100, "max": 2000, "default": 900 }
+  }
+}

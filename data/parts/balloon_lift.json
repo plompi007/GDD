@@ -9,6 +9,7 @@
     "mass": 0.15,
     "restitution": 0.50,
     "friction": 0.10,
+    "linearDamping": 1.0,
     "gravityScale": -0.35
   },
   "tags": ["FLAMMABLE", "POPPABLE", "WIND"],

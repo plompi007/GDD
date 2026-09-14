@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a05_tailwind",
+  "title": "Tailwind",
+  "chapter": "A_FOUNDATIONS",
+  "order": 5,
+  "difficulty": 2,
+  "goalText": "Power the fan and let the balloon ride the wind to the zone.",
+  "hints": [
+    "A balloon rises on its own.",
+    "A steady wind can carry it sideways too."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "outlet", "partType": "outlet_power", "x": -500, "y": -250 },
+    { "id": "fan", "partType": "fan_blower", "x": -300, "y": -260, "params": { "power": 6 } },
+    { "id": "goal", "partType": "goal_zone", "x": -90, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "balloon_lift", "x": -300, "y": -250, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "outlet", "anchorIdx": 0 },
+      "to": { "partId": "fan", "anchorIdx": 0 } }
+  ],
+  "winConditions": [
+    { "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal" }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Ride the wind", "parts": [], "connections": [], "expectedSolveTick": 800 }
+  ]
+}

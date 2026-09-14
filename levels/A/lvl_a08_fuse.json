@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a08_fuse",
+  "title": "Burning Down",
+  "chapter": "A_FOUNDATIONS",
+  "order": 8,
+  "difficulty": 3,
+  "goalText": "Light the fuse and blast through the wall before the ball arrives.",
+  "hints": [
+    "A burning fuse takes real time to reach the far end.",
+    "The wall won't move on its own."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "wall", "partType": "wall_brick", "x": 150, "y": -220 },
+    { "id": "bucket", "partType": "bin_target", "x": 420, "y": -270 },
+    { "id": "candle", "partType": "candle", "x": -10, "y": -100 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 40, "y": -100 },
+    { "id": "barrel_shelf", "partType": "plank_wood", "x": 90, "y": -123 },
+    { "id": "barrel", "partType": "charge_barrel", "x": 90, "y": -90 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_iron", "x": -145, "y": 60, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Timed demolition", "parts": [], "connections": [], "expectedSolveTick": 900 }
+  ]
+}

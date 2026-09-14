@@ -112,3 +112,103 @@ fn lvl_a04_catapult_is_deterministic() {
     assert_eq!(first, second, "run 1 and run 2 diverged");
     assert_eq!(second, third, "run 2 and run 3 diverged");
 }
+
+#[test]
+fn lvl_a05_tailwind_is_solvable() {
+    let json = include_str!("../levels/A/lvl_a05_tailwind.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_a05_tailwind did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_a05_tailwind_is_deterministic() {
+    let json = include_str!("../levels/A/lvl_a05_tailwind.json");
+    let first = subject_final_position(json, 600);
+    let second = subject_final_position(json, 600);
+    let third = subject_final_position(json, 600);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}
+
+#[test]
+fn lvl_a06_switch_is_solvable() {
+    let json = include_str!("../levels/A/lvl_a06_switch.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_a06_switch did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_a06_switch_is_deterministic() {
+    let json = include_str!("../levels/A/lvl_a06_switch.json");
+    let first = subject_final_position(json, 600);
+    let second = subject_final_position(json, 600);
+    let third = subject_final_position(json, 600);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}
+
+#[test]
+fn lvl_a08_fuse_is_solvable() {
+    let json = include_str!("../levels/A/lvl_a08_fuse.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_a08_fuse did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_a08_fuse_is_deterministic() {
+    let json = include_str!("../levels/A/lvl_a08_fuse.json");
+    let first = subject_final_position(json, 900);
+    let second = subject_final_position(json, 900);
+    let third = subject_final_position(json, 900);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}
+
+#[test]
+fn lvl_a09_cut_is_solvable() {
+    let json = include_str!("../levels/A/lvl_a09_cut.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_a09_cut did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_a09_cut_is_deterministic() {
+    let json = include_str!("../levels/A/lvl_a09_cut.json");
+    let first = subject_final_position(json, 500);
+    let second = subject_final_position(json, 500);
+    let third = subject_final_position(json, 500);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}
+
+#[test]
+fn lvl_a10_punch_is_solvable() {
+    let json = include_str!("../levels/A/lvl_a10_punch.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_a10_punch did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_a10_punch_is_deterministic() {
+    let json = include_str!("../levels/A/lvl_a10_punch.json");
+    let first = subject_final_position(json, 700);
+    let second = subject_final_position(json, 700);
+    let third = subject_final_position(json, 700);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}

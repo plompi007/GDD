@@ -178,6 +178,25 @@ pub struct PartDef {
     #[serde(default)]
     pub tags: Vec<String>,
     pub wind_factor: Option<f32>,
+    /// `fan_blower` (docs/GDD.md §1.3-e/A05): length of its rectangular
+    /// PNEUMATIC field in front of it, in pixels.
+    pub field_range: Option<f32>,
+    /// `fan_blower`: half-width of that same field, in pixels.
+    pub field_width: Option<f32>,
+    /// `candle`/`fuse_cord`/`charge_barrel` (docs/GDD.md §1.3-ו/A08):
+    /// THERMAL ignition/detection radius, in pixels.
+    pub thermal_radius: Option<f32>,
+    /// `charge_barrel`: radial-impulse magnitude on detonation.
+    pub blast_power: Option<f32>,
+    /// `charge_barrel`: radius (pixels) within which a detonation applies
+    /// impulse and destroys `DESTRUCTIBLE`-tagged parts.
+    pub blast_radius: Option<f32>,
+    /// `punch_arm` (docs/GDD.md §1.3-ח/A10): forward-impulse magnitude
+    /// applied to whatever triggers it.
+    pub impulse_power: Option<f32>,
+    /// `cutter_shears` (docs/GDD.md §1.3-ח/A09): radius (pixels) within
+    /// which a trigger severs `rope`s and pops `POPPABLE` parts.
+    pub cut_radius: Option<f32>,
     #[serde(default)]
     pub ports: Vec<Port>,
     #[serde(default)]

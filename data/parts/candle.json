@@ -1,0 +1,26 @@
+{
+  "partType": "candle",
+  "displayKey": "part.candle",
+  "category": "THERMAL",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 16, "h": 24 },
+    "friction": 0.5
+  },
+  "tags": [],
+  "thermalRadius": 20,
+  "ports": [
+    { "id": "thermal_out", "dir": "OUT", "energy": "THERMAL", "offset": { "x": 0, "y": 12 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": false,
+    "flippable": false,
+    "sprite": "parts/candle.png",
+    "binIcon": "icons/candle.svg"
+  },
+  "params": {
+    "startsLit": { "type": "boolean", "default": true }
+  }
+}

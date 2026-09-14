@@ -16,10 +16,17 @@ use bevy::prelude::*;
 use crate::level_file_format::PlacedPart;
 use crate::part::PartDef;
 
+pub mod candle;
+pub mod charge_barrel;
 pub mod conveyor;
+pub mod cutter_shears;
+pub mod fan_blower;
+pub mod fuse_cord;
 pub mod lever_seesaw;
 pub mod motor_electric;
 pub mod outlet_power;
+pub mod punch_arm;
+pub mod switch_plate;
 
 /// One `include_str!` per file, matching docs/GDD.md §1.3's initial P0
 /// catalog (5 static + 7 dynamic = 12) plus the two GOAL-category parts
@@ -49,6 +56,13 @@ const PART_JSON: &[&str] = &[
     include_str!("../../data/parts/pulley_wheel.json"),
     include_str!("../../data/parts/springboard.json"),
     include_str!("../../data/parts/lever_seesaw.json"),
+    include_str!("../../data/parts/fan_blower.json"),
+    include_str!("../../data/parts/switch_plate.json"),
+    include_str!("../../data/parts/candle.json"),
+    include_str!("../../data/parts/fuse_cord.json"),
+    include_str!("../../data/parts/charge_barrel.json"),
+    include_str!("../../data/parts/cutter_shears.json"),
+    include_str!("../../data/parts/punch_arm.json"),
 ];
 
 /// All known part definitions, keyed by `part_type`. A `BTreeMap` (not
@@ -103,6 +117,9 @@ impl Plugin for PartsPlugin {
         app.insert_resource(build_registry()).add_plugins((
             outlet_power::OutletPowerPlugin,
             conveyor::ConveyorPlugin,
+            switch_plate::SwitchPlatePlugin,
+            cutter_shears::CutterShearsPlugin,
+            punch_arm::PunchArmPlugin,
         ));
     }
 }
@@ -128,6 +145,13 @@ pub fn attach_part_behavior(commands: &mut Commands, entity: Entity, def: &PartD
         }
         "conveyor" => conveyor::attach(commands, entity, def),
         "lever_seesaw" => lever_seesaw::attach(commands, entity, Vec2::new(placed.x, placed.y)),
+        "fan_blower" => fan_blower::attach(commands, entity, def, placed),
+        "switch_plate" => switch_plate::attach(commands, entity, def, placed),
+        "candle" => candle::attach(commands, entity, def, placed),
+        "fuse_cord" => fuse_cord::attach(commands, entity, def),
+        "charge_barrel" => charge_barrel::attach(commands, entity, def, placed),
+        "cutter_shears" => cutter_shears::attach(commands, entity, def, placed),
+        "punch_arm" => punch_arm::attach(commands, entity, def),
         _ => {}
     }
 }
@@ -168,6 +192,13 @@ mod tests {
             "pulley_wheel",
             "springboard",
             "lever_seesaw",
+            "fan_blower",
+            "switch_plate",
+            "candle",
+            "fuse_cord",
+            "charge_barrel",
+            "cutter_shears",
+            "punch_arm",
         ] {
             assert!(
                 registry.get(part_type).is_some(),

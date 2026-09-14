@@ -26,12 +26,29 @@ pub struct RopeConnection {
     pub max_length: f32,
 }
 
-fn world_anchor(transforms: &Query<&Transform>, anchor: (Entity, Offset)) -> Option<Vec2> {
+pub(crate) fn world_anchor(transforms: &Query<&Transform>, anchor: (Entity, Offset)) -> Option<Vec2> {
     let transform = transforms.get(anchor.0).ok()?;
     Some(
         (transform.translation + transform.rotation * Vec3::new(anchor.1.x, anchor.1.y, 0.0))
             .truncate(),
     )
+}
+
+/// The full sequence of world-space points along a rope (both ends plus
+/// any pulley routing, in order) — shared by `rope_tension_system` and
+/// anything else that needs a rope's current geometry (e.g.
+/// `cutter_shears`'s proximity check).
+pub(crate) fn rope_world_points(
+    rope: &RopeConnection,
+    transforms: &Query<&Transform>,
+) -> Option<Vec<Vec2>> {
+    let mut points = Vec::with_capacity(rope.pulleys.len() + 2);
+    points.push(world_anchor(transforms, rope.end_a)?);
+    for pulley in &rope.pulleys {
+        points.push(world_anchor(transforms, *pulley)?);
+    }
+    points.push(world_anchor(transforms, rope.end_b)?);
+    Some(points)
 }
 
 /// docs/GDD.md §1.3-c: "changes direction, 1:1 force ratio" — a real rope
@@ -49,28 +66,9 @@ fn rope_tension_system(
     mut bodies: Query<(&mut Velocity, &AdditionalMassProperties)>,
 ) {
     for rope in &ropes {
-        let mut points = Vec::with_capacity(rope.pulleys.len() + 2);
-        let Some(a) = world_anchor(&transforms, rope.end_a) else {
+        let Some(points) = rope_world_points(rope, &transforms) else {
             continue;
         };
-        points.push(a);
-        let mut routing_ok = true;
-        for pulley in &rope.pulleys {
-            match world_anchor(&transforms, *pulley) {
-                Some(p) => points.push(p),
-                None => {
-                    routing_ok = false;
-                    break;
-                }
-            }
-        }
-        if !routing_ok {
-            continue;
-        }
-        let Some(b) = world_anchor(&transforms, rope.end_b) else {
-            continue;
-        };
-        points.push(b);
 
         let total_length: f32 = points.windows(2).map(|w| w[0].distance(w[1])).sum();
         if total_length <= rope.max_length {

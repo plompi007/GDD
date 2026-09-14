@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a10_punch",
+  "title": "One Good Hit",
+  "chapter": "A_FOUNDATIONS",
+  "order": 10,
+  "difficulty": 2,
+  "goalText": "Let the punch arm send the ball the rest of the way into the bin.",
+  "hints": [
+    "Rolling alone won't carry it that far.",
+    "A punch adds one clean burst of speed."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "punch", "partType": "punch_arm", "x": 300, "y": -266 },
+    { "id": "bin", "partType": "bin_target", "x": 500, "y": -270 },
+    { "id": "stopper", "partType": "wall_brick", "x": 540, "y": -220 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": -145, "y": 60, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Roll into the punch", "parts": [], "connections": [], "expectedSolveTick": 700 }
+  ]
+}

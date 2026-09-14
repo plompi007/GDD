@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a09_cut",
+  "title": "Let Go",
+  "chapter": "A_FOUNDATIONS",
+  "order": 9,
+  "difficulty": 3,
+  "goalText": "Trigger the shears to cut the rope and drop the ball into the bin.",
+  "hints": [
+    "A held rope keeps a hanging weight from falling.",
+    "Cutting it lets go all at once."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "pulley", "partType": "pulley_wheel", "x": 100, "y": 250 },
+    { "id": "bin", "partType": "bin_target", "x": 100, "y": -270 },
+    { "id": "cutter", "partType": "cutter_shears", "x": 160, "y": 200 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_iron", "x": 100, "y": 150, "tags": ["SUBJECT"] },
+    { "id": "weight", "partType": "ball_lead", "x": -100, "y": -270 },
+    { "id": "trigger", "partType": "ball_lead", "x": 160, "y": 400 }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_rope", "kind": "ROPE", "from": { "partId": "weight" },
+      "to": { "partId": "subject" }, "routedThrough": [{ "partId": "pulley" }],
+      "maxLength": 665 }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Drop the trigger", "parts": [], "connections": [], "expectedSolveTick": 500 }
+  ]
+}

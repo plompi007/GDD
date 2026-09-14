@@ -1,0 +1,23 @@
+{
+  "partType": "punch_arm",
+  "displayKey": "part.punch_arm",
+  "category": "ACTUATOR",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 20, "h": 40 },
+    "sensor": true
+  },
+  "tags": [],
+  "impulsePower": 150,
+  "ports": [],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 15,
+    "flippable": false,
+    "sprite": "parts/punch_arm.png",
+    "binIcon": "icons/punch_arm.svg"
+  },
+  "params": {}
+}

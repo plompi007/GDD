@@ -5,6 +5,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
+use crate::atmosphere::WindReceiver;
 use crate::part::{BodyKind, PartCategory, PartDef, ShapeSpec};
 
 /// Temporary flat-color scheme so parts are visually distinguishable before
@@ -65,6 +66,12 @@ pub fn spawn_part(
         Restitution::new(def.body.restitution),
         transform,
         Sprite::from_color(color, sprite_size),
+        // Every collider gets contact events, not just sensors: tag-rule
+        // reactions (docs/GDD.md §1.4.2 — SHARP popping POPPABLE, etc.) and
+        // IMPACT-triggered parts (switch_plate, punch_arm, cutter_shears)
+        // all need `CollisionEvent`/`CollidingEntities` on ordinary solid
+        // bodies too, not just Sensor-marked ones.
+        ActiveEvents::COLLISION_EVENTS,
     ));
 
     if def.body.sensor {
@@ -72,7 +79,12 @@ pub fn spawn_part(
         // plugin/systems/collider.rs `update_colliding_entities`), which is only
         // emitted for colliders with ActiveEvents::COLLISION_EVENTS — win_conditions.rs
         // (M3) reads CollidingEntities on GOAL-category entities to evaluate CONTAINED.
-        entity.insert((Sensor, CollidingEntities::default(), ActiveEvents::COLLISION_EVENTS));
+        entity.insert((Sensor, CollidingEntities::default()));
+    } else {
+        // Non-sensor colliders still benefit from `CollidingEntities` for
+        // the same tag-rule/IMPACT-trigger systems above (e.g. `spike_pin`
+        // detecting a `POPPABLE` balloon it's physically touching).
+        entity.insert(CollidingEntities::default());
     }
 
     if def.body.kind == BodyKind::Dynamic {
@@ -89,6 +101,12 @@ pub fn spawn_part(
             // `rope_network`'s tension impulse and `conveyor`'s belt nudge
             // need read/write access to every dynamic body's velocity.
             Velocity::zero(),
+            // docs/GDD.md §1.4.3: every dynamic body is a wind receiver;
+            // `windFactor` defaults to 1.0 for parts that don't override it.
+            WindReceiver {
+                factor: def.wind_factor.unwrap_or(1.0),
+                inv_mass: 1.0 / def.body.mass.max(0.01),
+            },
         ));
         if def.body.ccd {
             entity.insert(Ccd::enabled());

@@ -1,0 +1,27 @@
+{
+  "partType": "fuse_cord",
+  "displayKey": "part.fuse_cord",
+  "category": "THERMAL",
+  "tier": "P0",
+  "body": {
+    "type": "fixed",
+    "shape": { "kind": "box", "w": 100, "h": 6 },
+    "friction": 0.5,
+    "sensor": true
+  },
+  "tags": [],
+  "thermalRadius": 8,
+  "ports": [
+    { "id": "thermal_in", "dir": "IN", "energy": "THERMAL", "offset": { "x": -50, "y": 0 } },
+    { "id": "thermal_out", "dir": "OUT", "energy": "THERMAL", "offset": { "x": 50, "y": 0 } }
+  ],
+  "anchors": [],
+  "editor": {
+    "rotatable": true,
+    "rotationSnap": 15,
+    "flippable": false,
+    "sprite": "parts/fuse_cord.png",
+    "binIcon": "icons/fuse_cord.svg"
+  },
+  "params": {}
+}

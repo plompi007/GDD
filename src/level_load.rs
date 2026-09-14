@@ -61,9 +61,22 @@ pub(crate) fn spawn_placed_part(
         Vec2::new(placed.x, placed.y),
         placed.rotation,
     );
+    // `PartTags` is the union of this part *type*'s inherent tags
+    // (data/parts/*.json's own "tags" — DESTRUCTIBLE, FLAMMABLE, POPPABLE,
+    // SHARP, etc., used by generic tag-rule systems like
+    // sim::collision_router and atmosphere's thermal tag rules) and this
+    // *placed instance*'s own level-authored tags (SUBJECT, GOAL, etc.) —
+    // the two are orthogonal, so callers never need to care which side a
+    // tag came from.
+    let tags = def
+        .tags
+        .iter()
+        .cloned()
+        .chain(placed.tags.iter().cloned())
+        .collect();
     commands.entity(entity).insert((
         PlacedId(placed.id.clone()),
-        PartTags(placed.tags.clone()),
+        PartTags(tags),
         LevelEntity,
     ));
     attach_part_behavior(commands, entity, def, placed);
