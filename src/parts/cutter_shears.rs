@@ -11,7 +11,7 @@ use crate::energy_graph::{EnergyGraph, EnergySignal};
 use crate::level_file_format::PlacedPart;
 use crate::level_load::{PartTags, PlacedId};
 use crate::part::PartDef;
-use crate::rope_network::{rope_world_points, RopeConnection};
+use crate::rope_network::{point_segment_distance, rope_world_points, RopeConnection};
 use crate::sim::SimSet;
 
 #[derive(Component)]
@@ -33,16 +33,6 @@ pub fn attach(commands: &mut Commands, entity: Entity, def: &PartDef, _placed: &
         electric_in_port,
         triggered: false,
     });
-}
-
-fn point_segment_distance(p: Vec2, a: Vec2, b: Vec2) -> f32 {
-    let ab = b - a;
-    let len_sq = ab.length_squared();
-    if len_sq < 1e-6 {
-        return p.distance(a);
-    }
-    let t = ((p - a).dot(ab) / len_sq).clamp(0.0, 1.0);
-    p.distance(a + ab * t)
 }
 
 #[allow(clippy::too_many_arguments)]

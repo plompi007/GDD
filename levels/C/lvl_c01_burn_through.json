@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c01_burn_through",
+  "title": "Slow Fuse",
+  "chapter": "C_TIMING",
+  "order": 1,
+  "difficulty": 3,
+  "goalText": "Light the fuse — once the flame reaches the rope, it burns through.",
+  "hints": [
+    "Fire doesn't only work on fuses and charges.",
+    "A rope held up by nothing but itself won't wait for you."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "pulley", "partType": "pulley_wheel", "x": 100, "y": 250 },
+    { "id": "bin", "partType": "bin_target", "x": 100, "y": -270 },
+    { "id": "catch_left", "partType": "wall_brick", "x": 44, "y": -220 },
+    { "id": "catch_right", "partType": "wall_brick", "x": 156, "y": -220 },
+    { "id": "candle", "partType": "candle", "x": -5, "y": 200 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 45, "y": 200 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_iron", "x": 100, "y": 150, "tags": ["SUBJECT"] },
+    { "id": "weight", "partType": "ball_lead", "x": -100, "y": -270 }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_rope", "kind": "ROPE", "from": { "partId": "weight" },
+      "to": { "partId": "subject" }, "routedThrough": [{ "partId": "pulley" }],
+      "maxLength": 665 }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Let the flame do the cutting", "parts": [], "connections": [], "expectedSolveTick": 500 }
+  ]
+}

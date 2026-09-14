@@ -37,7 +37,7 @@ pub(crate) fn world_anchor(transforms: &Query<&Transform>, anchor: (Entity, Offs
 /// The full sequence of world-space points along a rope (both ends plus
 /// any pulley routing, in order) — shared by `rope_tension_system` and
 /// anything else that needs a rope's current geometry (e.g.
-/// `cutter_shears`'s proximity check).
+/// `cutter_shears`'s and `atmosphere`'s proximity checks).
 pub(crate) fn rope_world_points(
     rope: &RopeConnection,
     transforms: &Query<&Transform>,
@@ -49,6 +49,20 @@ pub(crate) fn rope_world_points(
     }
     points.push(world_anchor(transforms, rope.end_b)?);
     Some(points)
+}
+
+/// Shortest distance from a point to a line segment — shared by
+/// `cutter_shears` (does a trigger's radius reach a rope segment?) and
+/// `atmosphere`'s thermal system (docs/GDD.md §1.4.1: THERMAL x TENSION —
+/// "a rope burns through and parts").
+pub(crate) fn point_segment_distance(p: Vec2, a: Vec2, b: Vec2) -> f32 {
+    let ab = b - a;
+    let len_sq = ab.length_squared();
+    if len_sq < 1e-6 {
+        return p.distance(a);
+    }
+    let t = ((p - a).dot(ab) / len_sq).clamp(0.0, 1.0);
+    p.distance(a + ab * t)
 }
 
 /// docs/GDD.md §1.3-c: "changes direction, 1:1 force ratio" — a real rope

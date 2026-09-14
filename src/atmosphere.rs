@@ -19,6 +19,7 @@ use bevy_rapier2d::prelude::*;
 
 use crate::energy_graph::{EnergyGraph, EnergySignal};
 use crate::level_load::{PartTags, PlacedId};
+use crate::rope_network::{point_segment_distance, rope_world_points, RopeConnection};
 use crate::sim::{SimSet, FIXED_DT};
 
 /// Every `DYNAMIC` body gets one of these at spawn (docs/GDD.md §1.3
@@ -179,6 +180,8 @@ fn thermal_update_system(
     mut barrels: Query<(Entity, &Transform, &mut ChargeBarrel)>,
     mut dynamic_bodies: Query<(&Transform, &mut Velocity)>,
     tagged: Query<(Entity, &Transform, &PartTags)>,
+    ropes: Query<(Entity, &RopeConnection)>,
+    transforms: Query<&Transform>,
 ) {
     let sources = collect_thermal_sources(&candles, &fuses);
 
@@ -204,6 +207,23 @@ fn thermal_update_system(
             continue;
         }
         if near_any_source(transform.translation.truncate(), &sources) {
+            commands.entity(entity).despawn();
+        }
+    }
+
+    // 2b. docs/GDD.md §1.4.1's THERMAL x TENSION row: a rope in a
+    // source's radius burns through and parts, same as `cutter_shears`
+    // severing it on purpose.
+    for (entity, rope) in &ropes {
+        let Some(points) = rope_world_points(rope, &transforms) else {
+            continue;
+        };
+        let burned_through = points.windows(2).any(|seg| {
+            sources
+                .iter()
+                .any(|(source, radius)| point_segment_distance(*source, seg[0], seg[1]) <= *radius)
+        });
+        if burned_through {
             commands.entity(entity).despawn();
         }
     }
