@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_b09_blow_the_switch",
+  "title": "Blow the Switch",
+  "chapter": "B_COMBOS",
+  "order": 9,
+  "difficulty": 3,
+  "goalText": "The fan rolls the light ball into the plate — the belt does the rest.",
+  "hints": [
+    "A steady wind can roll a light ball just as well as a slope can.",
+    "The plate only needs a touch."
+  ],
+  "world": { "width": 1200, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "outlet", "partType": "outlet_power", "x": -300, "y": -260 },
+    { "id": "fan", "partType": "fan_blower", "x": -200, "y": -260, "params": { "power": 8 } },
+    { "id": "switch", "partType": "switch_plate", "x": -50, "y": -266,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 50, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 85, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 130, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 400, "y": -50 },
+    { "id": "wall", "partType": "wall_brick", "x": 526, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 494, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "trigger", "partType": "ball_rubber", "x": -180, "y": -260 },
+    { "id": "subject", "partType": "ball_wood", "x": 320, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_wind", "kind": "WIRE", "from": { "partId": "outlet", "anchorIdx": 0 },
+      "to": { "partId": "fan", "anchorIdx": 0 } },
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Wind, roll, latch", "parts": [], "connections": [], "expectedSolveTick": 900 }
+  ]
+}

@@ -34,6 +34,7 @@ pub const ALL_LEVELS: &[&str] = &[
     include_str!("../levels/B/lvl_b06_triple_mesh.json"),
     include_str!("../levels/B/lvl_b07_bounce_relay.json"),
     include_str!("../levels/B/lvl_b08_launch_lever.json"),
+    include_str!("../levels/B/lvl_b09_blow_the_switch.json"),
     include_str!("../levels/C/lvl_c01_burn_through.json"),
     include_str!("../levels/C/lvl_c02_late_arrival.json"),
     include_str!("../levels/C/lvl_c03_clear_the_way.json"),
