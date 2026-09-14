@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c03_clear_the_way",
+  "title": "Clear the Way",
+  "chapter": "C_TIMING",
+  "order": 3,
+  "difficulty": 3,
+  "goalText": "Power the fan — it blows out the candle in its path and carries the balloon to the zone.",
+  "hints": [
+    "A strong enough draft blows out a flame.",
+    "The same wind that clears the candle also carries the balloon."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "outlet", "partType": "outlet_power", "x": -500, "y": -250 },
+    { "id": "fan", "partType": "fan_blower", "x": -300, "y": -260,
+      "params": { "power": 6 } },
+    { "id": "candle", "partType": "candle", "x": -230, "y": -190 },
+    { "id": "goal", "partType": "goal_zone", "x": -90, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "balloon_lift", "x": -280, "y": -250, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "outlet", "anchorIdx": 0 },
+      "to": { "partId": "fan", "anchorIdx": 0 } }
+  ],
+  "winConditions": [
+    { "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal" }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "SUBJECT_DESTROYED", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Blow it clear", "parts": [], "connections": [], "expectedSolveTick": 800 }
+  ]
+}

@@ -94,10 +94,30 @@ fn world_point(transform: &Transform, local_offset: Vec2) -> Vec2 {
 /// `windFactor`/mass — a direct `Velocity` nudge (like `rope_network`'s and
 /// `conveyor`'s own corrections), kept consistent with the rest of this
 /// codebase's impulse-based style rather than `ExternalForce`.
+/// Is `point` inside `fan`'s rectangular field (docs/GDD.md §1.4.3's
+/// `FieldSystem`)? Shared by the push and the candle-extinguish checks
+/// below — same field, two different effects on what's inside it.
+fn in_fan_field(fan_transform: &Transform, fan: &FanBlower, point: Vec2) -> bool {
+    let origin = fan_transform.translation.truncate();
+    let direction = (fan_transform.rotation * Vec3::X)
+        .truncate()
+        .normalize_or_zero();
+    if direction == Vec2::ZERO {
+        return false;
+    }
+    let offset = point - origin;
+    let along = offset.dot(direction);
+    if along < 0.0 || along > fan.range {
+        return false;
+    }
+    (offset - direction * along).length() <= fan.half_width
+}
+
 fn wind_field_system(
     energy: Res<EnergyGraph>,
     fans: Query<(&PlacedId, &Transform, &FanBlower)>,
     mut bodies: Query<(&Transform, &mut Velocity, &WindReceiver)>,
+    mut candles: Query<(&Transform, &mut ThermalEmitter)>,
 ) {
     for (id, fan_transform, fan) in &fans {
         let powered = matches!(
@@ -127,6 +147,20 @@ fn wind_field_system(
             let falloff = 1.0 - (along / fan.range) * 0.5;
             let accel = fan.power * receiver.factor * receiver.inv_mass * falloff;
             velocity.linvel += direction * accel * FIXED_DT;
+        }
+
+        // docs/GDD.md §1.4.1's PNEUMATIC x THERMAL row: "candle מכבה
+        // (power >= 2)" — a strong enough draft blows it out for good;
+        // it never relights on its own once `active` goes false.
+        if fan.power < 2.0 {
+            continue;
+        }
+        for (candle_transform, mut emitter) in &mut candles {
+            if emitter.active
+                && in_fan_field(fan_transform, fan, candle_transform.translation.truncate())
+            {
+                emitter.active = false;
+            }
         }
     }
 }
