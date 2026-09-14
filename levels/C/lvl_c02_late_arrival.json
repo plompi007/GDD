@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c02_late_arrival",
+  "title": "Late Arrival",
+  "chapter": "C_TIMING",
+  "order": 2,
+  "difficulty": 3,
+  "goalText": "The wall blasts open on its own — just make sure the ball doesn't beat it there.",
+  "hints": [
+    "A springboard adds energy, so the ball won't take long to arrive.",
+    "The fuse is already lit when the level starts."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 15 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "board", "partType": "springboard", "x": 0, "y": -180, "rotation": -15 },
+    { "id": "candle", "partType": "candle", "x": 150, "y": -140 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 200, "y": -140 },
+    { "id": "barrel_shelf", "partType": "plank_wood", "x": 250, "y": -163 },
+    { "id": "barrel", "partType": "charge_barrel", "x": 250, "y": -130 },
+    { "id": "wall", "partType": "wall_brick", "x": 300, "y": -268 },
+    { "id": "bin", "partType": "bin_target", "x": 268, "y": -268 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_rubber", "x": -20, "y": -60, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 300 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "The fuse wins the race", "parts": [], "connections": [], "expectedSolveTick": 400 }
+  ]
+}

@@ -91,3 +91,23 @@ fn lvl_c01_burn_through_is_deterministic() {
     assert_eq!(first, second, "run 1 and run 2 diverged");
     assert_eq!(second, third, "run 2 and run 3 diverged");
 }
+
+#[test]
+fn lvl_c02_late_arrival_is_solvable() {
+    let json = include_str!("../levels/C/lvl_c02_late_arrival.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_c02_late_arrival did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_c02_late_arrival_is_deterministic() {
+    let json = include_str!("../levels/C/lvl_c02_late_arrival.json");
+    let first = subject_final_position(json, 500);
+    let second = subject_final_position(json, 500);
+    let third = subject_final_position(json, 500);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}
