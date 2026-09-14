@@ -42,6 +42,7 @@ pub const ALL_LEVELS: &[&str] = &[
     include_str!("../levels/C/lvl_c05_needle_point.json"),
     include_str!("../levels/D/lvl_d01_chain_of_command.json"),
     include_str!("../levels/D/lvl_d02_signal_chain.json"),
+    include_str!("../levels/D/lvl_d03_bounce_and_cut.json"),
 ];
 
 /// Index into [`ALL_LEVELS`] of the level currently loaded into

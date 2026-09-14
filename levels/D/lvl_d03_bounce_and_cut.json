@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_d03_bounce_and_cut",
+  "title": "Bounce and Cut",
+  "chapter": "D_MASTER",
+  "order": 3,
+  "difficulty": 5,
+  "goalText": "Bounce the trigger onto the plate — it cuts the line, and the drop starts the belt.",
+  "hints": [
+    "A springboard sends the ball up as much as forward.",
+    "A cut rope lets go all at once."
+  ],
+  "world": { "width": 2400, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "board", "partType": "springboard", "x": -150, "y": -280, "rotation": -20 },
+    { "id": "switch1", "partType": "switch_plate", "x": 20, "y": -85,
+      "params": { "mode": "toggle" } },
+    { "id": "creep_stop", "partType": "wall_brick", "x": 450, "y": -260 },
+    { "id": "pulley", "partType": "pulley_wheel", "x": 540, "y": 250 },
+    { "id": "cutter", "partType": "cutter_shears", "x": 600, "y": 200 },
+    { "id": "switch2", "partType": "switch_plate", "x": 540, "y": -270,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 640, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 675, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 720, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 990, "y": -50 },
+    { "id": "final_wall", "partType": "wall_brick", "x": 1116, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 1084, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "trigger", "partType": "ball_rubber", "x": -150, "y": 0 },
+    { "id": "hanging_weight", "partType": "ball_iron", "x": 540, "y": 150 },
+    { "id": "counterweight", "partType": "ball_lead", "x": 340, "y": -270 },
+    { "id": "subject", "partType": "ball_wood", "x": 910, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_rope", "kind": "ROPE", "from": { "partId": "counterweight" },
+      "to": { "partId": "hanging_weight" }, "routedThrough": [{ "partId": "pulley" }],
+      "maxLength": 665 },
+    { "id": "c_power1", "kind": "WIRE", "from": { "partId": "switch1", "anchorIdx": 0 },
+      "to": { "partId": "cutter", "anchorIdx": 0 } },
+    { "id": "c_power2", "kind": "WIRE", "from": { "partId": "switch2", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "One bounce, four mechanisms", "parts": [], "connections": [], "expectedSolveTick": 1300 }
+  ]
+}
