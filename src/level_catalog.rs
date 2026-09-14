@@ -40,6 +40,7 @@ pub const ALL_LEVELS: &[&str] = &[
     include_str!("../levels/B/lvl_b10_four_in_a_row.json"),
     include_str!("../levels/B/lvl_b11_snip_and_drop.json"),
     include_str!("../levels/B/lvl_b12_blast_the_glass.json"),
+    include_str!("../levels/B/lvl_b13_chain_reaction.json"),
     include_str!("../levels/C/lvl_c01_burn_through.json"),
     include_str!("../levels/C/lvl_c02_late_arrival.json"),
     include_str!("../levels/C/lvl_c03_clear_the_way.json"),
