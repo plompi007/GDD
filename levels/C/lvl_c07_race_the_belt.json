@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c07_race_the_belt",
+  "title": "Race the Belt",
+  "chapter": "C_TIMING",
+  "order": 7,
+  "difficulty": 3,
+  "goalText": "Light the fuse and let the belt carry the ball — the wall needs to be gone by the time it arrives.",
+  "hints": [
+    "A burning fuse takes real time to reach the far end.",
+    "The belt carries the ball at a steady pace."
+  ],
+  "world": { "width": 1800, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "outlet", "partType": "outlet_power", "x": -300, "y": 100 },
+    { "id": "motor", "partType": "motor_electric", "x": -200, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": -165, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": -120, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 150, "y": -50 },
+    { "id": "candle", "partType": "candle", "x": 300, "y": -100 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 350, "y": -100 },
+    { "id": "barrel_shelf", "partType": "plank_wood", "x": 400, "y": -123 },
+    { "id": "barrel", "partType": "charge_barrel", "x": 400, "y": -90 },
+    { "id": "wall", "partType": "wall_brick", "x": 460, "y": -220 },
+    { "id": "bucket", "partType": "bin_target", "x": 730, "y": -270 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": 70, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "outlet", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Belt beats the flame", "parts": [], "connections": [], "expectedSolveTick": 1200 }
+  ]
+}
