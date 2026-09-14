@@ -343,6 +343,26 @@ fn lvl_b14_fragile_cargo_is_solvable() {
 }
 
 #[test]
+fn lvl_b15_ride_to_the_zone_is_solvable() {
+    let json = include_str!("../levels/B/lvl_b15_ride_to_the_zone.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_b15_ride_to_the_zone did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_b15_ride_to_the_zone_is_deterministic() {
+    let json = include_str!("../levels/B/lvl_b15_ride_to_the_zone.json");
+    let first = subject_final_position(json, 580);
+    let second = subject_final_position(json, 580);
+    let third = subject_final_position(json, 580);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}
+
+#[test]
 fn lvl_b14_fragile_cargo_is_deterministic() {
     let json = include_str!("../levels/B/lvl_b14_fragile_cargo.json");
     let first = subject_final_position(json, 660);
