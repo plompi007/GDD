@@ -37,12 +37,25 @@ pub struct ConditionHoldState {
     fail: Vec<f32>,
 }
 
+/// docs/GDD.md §2.5: reset rebuilds physics from scratch, and the sim
+/// clock/hold timers are as much "derived state" as the entities
+/// `level_load::reset_level` despawns — without this, re-entering `Edit`
+/// (via the reset key, or loading a different level) would carry over a
+/// stale `elapsed_seconds`, and a level with a short `timeLimitSec` could
+/// fail via `TIMEOUT` before `Running` ever produces a single tick.
+fn reset_sim_clock_and_holds(mut sim_clock: ResMut<SimClock>, mut hold_state: ResMut<ConditionHoldState>) {
+    sim_clock.elapsed_seconds = 0.0;
+    hold_state.win.clear();
+    hold_state.fail.clear();
+}
+
 pub struct WinConditionsPlugin;
 
 impl Plugin for WinConditionsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SimClock>()
             .init_resource::<ConditionHoldState>()
+            .add_systems(OnEnter(GameState::Edit), reset_sim_clock_and_holds)
             .add_systems(
                 FixedUpdate,
                 evaluate_win_conditions

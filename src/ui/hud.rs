@@ -3,9 +3,11 @@
 //! place and swaps its label: Play → Stop → Reset. No popping buttons."
 //!
 //! Rebuilt on every `OnEnter(GameState::Edit)` (the level title/goal text
-//! come from `EditorState`, which only actually changes level from a
-//! reset) — cheap enough at this scale, and keeps this module from having
-//! to special-case "did the level change" vs. "just re-entered Edit".
+//! come from `EditorState`, which only ever changes alongside a
+//! transition into `Edit` — a reset, or `app.rs`'s level-cycle stand-in
+//! for the `LevelSelect` screen) — cheap enough at this scale, and keeps
+//! this module from having to special-case "did the level change" vs.
+//! "just re-entered Edit".
 
 use bevy::prelude::*;
 
