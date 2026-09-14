@@ -211,3 +211,23 @@ fn lvl_b07_bounce_relay_is_deterministic() {
     assert_eq!(first, second, "run 1 and run 2 diverged");
     assert_eq!(second, third, "run 2 and run 3 diverged");
 }
+
+#[test]
+fn lvl_b08_launch_lever_is_solvable() {
+    let json = include_str!("../levels/B/lvl_b08_launch_lever.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_b08_launch_lever did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_b08_launch_lever_is_deterministic() {
+    let json = include_str!("../levels/B/lvl_b08_launch_lever.json");
+    let first = subject_final_position(json, 900);
+    let second = subject_final_position(json, 900);
+    let third = subject_final_position(json, 900);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}

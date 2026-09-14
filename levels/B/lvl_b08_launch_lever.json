@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_b08_launch_lever",
+  "title": "Cut and Catapult",
+  "chapter": "B_COMBOS",
+  "order": 8,
+  "difficulty": 3,
+  "goalText": "Cut the rope so the held weight drops onto the lever and flings the ball home.",
+  "hints": [
+    "A held rope keeps the weight from falling.",
+    "The lever pivots at its center, same as ever."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "lever", "partType": "lever_seesaw", "x": 0, "y": 0 },
+    { "id": "pulley", "partType": "pulley_wheel", "x": -100, "y": 250 },
+    { "id": "cutter", "partType": "cutter_shears", "x": -40, "y": 200 },
+    { "id": "outlet", "partType": "outlet_power", "x": -40, "y": 130 },
+    { "id": "wall", "partType": "wall_brick", "x": 700, "y": -268 },
+    { "id": "bin", "partType": "bin_target", "x": 668, "y": -268 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": 100, "y": 22, "tags": ["SUBJECT"] },
+    { "id": "weight", "partType": "crate_wood", "x": -100, "y": 200 },
+    { "id": "anchor", "partType": "ball_lead", "x": -300, "y": -270 }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_rope", "kind": "ROPE", "from": { "partId": "anchor" },
+      "to": { "partId": "weight" }, "routedThrough": [{ "partId": "pulley" }],
+      "maxLength": 615 },
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "outlet", "anchorIdx": 0 },
+      "to": { "partId": "cutter", "anchorIdx": 0 } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 300 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Cut it loose", "parts": [], "connections": [], "expectedSolveTick": 700 }
+  ]
+}
