@@ -80,8 +80,15 @@ jobs:
           sdkmanager --install "platforms;android-30"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
+      # Cargo.toml declares both a `[[bin]]` and a `[lib] crate-type=cdylib`
+      # target, both named "chainworks" (the bin is desktop-only; Android
+      # loads the cdylib via JNI — see Cargo.toml's own comment). Plain
+      # `cargo apk build` can't disambiguate which one to package and
+      # panics ("Bin is not compatible with Cdylib") — `--lib` tells it
+      # explicitly to build the cdylib, which is the only artifact Android
+      # actually needs.
       - name: Build debug APK
-        run: cargo apk build
+        run: cargo apk build --lib
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
