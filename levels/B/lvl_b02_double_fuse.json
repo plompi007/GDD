@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_b02_double_fuse",
+  "title": "Relay",
+  "chapter": "B_COMBOS",
+  "order": 2,
+  "difficulty": 3,
+  "goalText": "Light the first fuse — it passes the flame down the line to blast the wall.",
+  "hints": [
+    "A burning fuse can light the next one it touches.",
+    "Two fuses in a row take twice as long."
+  ],
+  "world": { "width": 2000, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "candle", "partType": "candle", "x": 280, "y": -100 },
+    { "id": "fuse1", "partType": "fuse_cord", "x": 330, "y": -100 },
+    { "id": "fuse2", "partType": "fuse_cord", "x": 430, "y": -100 },
+    { "id": "barrel_shelf", "partType": "plank_wood", "x": 480, "y": -123 },
+    { "id": "barrel", "partType": "charge_barrel", "x": 480, "y": -90 },
+    { "id": "wall", "partType": "wall_brick", "x": 550, "y": -220 },
+    { "id": "bucket", "partType": "bin_target", "x": 750, "y": -270 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_iron", "x": -145, "y": 60, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Relay the flame", "parts": [], "connections": [], "expectedSolveTick": 1400 }
+  ]
+}
