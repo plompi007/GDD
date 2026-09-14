@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_b03_break_through",
+  "title": "Break Through",
+  "chapter": "B_COMBOS",
+  "order": 3,
+  "difficulty": 3,
+  "goalText": "Punch the ball hard enough to shatter the glass blocking the way.",
+  "hints": [
+    "Glass only breaks if it's hit hard enough.",
+    "A punch arm needs something touching it first."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "punch", "partType": "punch_arm", "x": 0, "y": -266,
+      "params": { "power": 700 } },
+    { "id": "bin", "partType": "bin_target", "x": 300, "y": -270 },
+    { "id": "stopper", "partType": "wall_brick", "x": 340, "y": -220 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_iron", "x": -15, "y": -266, "tags": ["SUBJECT"] },
+    { "id": "glass", "partType": "ball_glass", "x": 150, "y": -272 }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Punch through the glass", "parts": [], "connections": [], "expectedSolveTick": 300 }
+  ]
+}

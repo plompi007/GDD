@@ -6,6 +6,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
+use crate::level_file_format::PlacedPart;
 use crate::part::PartDef;
 use crate::sim::SimSet;
 
@@ -15,9 +16,16 @@ pub struct PunchArm {
     pub was_touching: bool,
 }
 
-pub fn attach(commands: &mut Commands, entity: Entity, def: &PartDef) {
+/// `placed.params.power` overrides the part type's own default
+/// (docs/GDD.md §5.1 pattern already used by `fan_blower`/`charge_barrel`)
+/// — a level author can tune how hard a specific punch_arm hits without
+/// changing every other level's copy of the shared part JSON.
+pub fn attach(commands: &mut Commands, entity: Entity, def: &PartDef, placed: &PlacedPart) {
     commands.entity(entity).insert(PunchArm {
-        impulse_power: def.impulse_power.unwrap_or(700.0),
+        impulse_power: placed
+            .params
+            .power
+            .unwrap_or_else(|| def.impulse_power.unwrap_or(700.0)),
         was_touching: false,
     });
 }

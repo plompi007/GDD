@@ -9,7 +9,7 @@
     "sensor": true
   },
   "tags": [],
-  "impulsePower": 150,
+  "impulsePower": 700,
   "ports": [],
   "anchors": [],
   "editor": {
@@ -19,5 +19,7 @@
     "sprite": "parts/punch_arm.png",
     "binIcon": "icons/punch_arm.svg"
   },
-  "params": {}
+  "params": {
+    "power": { "type": "number", "min": 50, "max": 1200, "default": 700 }
+  }
 }

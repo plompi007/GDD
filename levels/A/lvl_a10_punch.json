@@ -14,7 +14,8 @@
   "fixedParts": [
     { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
     { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
-    { "id": "punch", "partType": "punch_arm", "x": 300, "y": -266 },
+    { "id": "punch", "partType": "punch_arm", "x": 300, "y": -266,
+      "params": { "power": 150 } },
     { "id": "bin", "partType": "bin_target", "x": 500, "y": -270 },
     { "id": "stopper", "partType": "wall_brick", "x": 540, "y": -220 }
   ],
