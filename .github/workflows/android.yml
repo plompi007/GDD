@@ -27,14 +27,41 @@ on:
 jobs:
   android-debug-apk:
     runs-on: ubuntu-latest
+    # A full from-scratch cross-compile of Bevy + bevy_rapier2d (text
+    # shaping, audio, gltf, etc. all come along) took 26+ minutes on a
+    # cold cache the first time this actually ran — give it real headroom
+    # instead of silently timing out mid-build.
+    timeout-minutes: 60
+    env:
+      # A debug build's full-fidelity DWARF across that entire dependency
+      # tree is what blew the runner's disk ("No space left on device")
+      # after a 26-minute build otherwise succeeded — this is still a
+      # debug (unoptimized, cargo-apk-default-signed) build, just without
+      # carrying full debug symbols nothing here uses anyway.
+      CARGO_PROFILE_DEV_DEBUG: "0"
     steps:
       - uses: actions/checkout@v4
+
+      # Standard free-disk-space step for large Android builds: ubuntu-latest
+      # ships ~25GB of preinstalled toolchains (dotnet, ghc, boost, unused
+      # Android system images) this workflow never touches.
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android/sdk/ndk
+          sudo rm -rf /usr/local/lib/android/sdk/system-images
+          df -h /
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
 
       - uses: android-actions/setup-android@v3
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-aarch64-linux-android
 
       - name: Install cargo-apk
         run: cargo install cargo-apk
