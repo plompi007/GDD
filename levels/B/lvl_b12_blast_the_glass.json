@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_b12_blast_the_glass",
+  "title": "Blast the Glass",
+  "chapter": "B_COMBOS",
+  "order": 12,
+  "difficulty": 3,
+  "goalText": "Light the fuse — the blast clears the wall and sends the glass flying.",
+  "hints": [
+    "A burning fuse takes real time to reach the far end.",
+    "The blast pushes everything nearby, not just the wall."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "candle", "partType": "candle", "x": -10, "y": -100 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 40, "y": -100 },
+    { "id": "barrel_shelf", "partType": "plank_wood", "x": 90, "y": -123 },
+    { "id": "barrel", "partType": "charge_barrel", "x": 90, "y": -90 },
+    { "id": "wall", "partType": "wall_brick", "x": 150, "y": -220 },
+    { "id": "bucket", "partType": "bin_target", "x": 420, "y": -270 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_iron", "x": -145, "y": 60, "tags": ["SUBJECT"] },
+    { "id": "glass", "partType": "ball_glass", "x": 130, "y": -90 }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "One blast, two effects", "parts": [], "connections": [], "expectedSolveTick": 900 }
+  ]
+}
