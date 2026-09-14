@@ -151,3 +151,23 @@ fn lvl_b04_launch_switch_is_deterministic() {
     assert_eq!(first, second, "run 1 and run 2 diverged");
     assert_eq!(second, third, "run 2 and run 3 diverged");
 }
+
+#[test]
+fn lvl_b05_windswept_is_solvable() {
+    let json = include_str!("../levels/B/lvl_b05_windswept.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_b05_windswept did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_b05_windswept_is_deterministic() {
+    let json = include_str!("../levels/B/lvl_b05_windswept.json");
+    let first = subject_final_position(json, 1000);
+    let second = subject_final_position(json, 1000);
+    let third = subject_final_position(json, 1000);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}

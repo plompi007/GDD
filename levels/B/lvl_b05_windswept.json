@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_b05_windswept",
+  "title": "Windswept",
+  "chapter": "B_COMBOS",
+  "order": 5,
+  "difficulty": 3,
+  "goalText": "Let the wind push the marble onto the plate to start the belt.",
+  "hints": [
+    "A light, low-friction ball moves easiest in the wind.",
+    "The plate only needs a light touch."
+  ],
+  "world": { "width": 2000, "height": 1200, "gravityY": 9.81, "timeLimitSec": 25 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "outlet", "partType": "outlet_power", "x": -500, "y": -250 },
+    { "id": "fan", "partType": "fan_blower", "x": -300, "y": -260,
+      "params": { "power": 6 } },
+    { "id": "switch", "partType": "switch_plate", "x": -100, "y": -270 },
+    { "id": "motor", "partType": "motor_electric", "x": 200, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 235, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 280, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 550, "y": -50 },
+    { "id": "wall", "partType": "wall_brick", "x": 676, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 644, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "trigger", "partType": "ball_glass", "x": -280, "y": -270 },
+    { "id": "subject", "partType": "ball_wood", "x": 470, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "outlet", "anchorIdx": 0 },
+      "to": { "partId": "fan", "anchorIdx": 0 } },
+    { "id": "c_switch", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Ride the breeze", "parts": [], "connections": [], "expectedSolveTick": 900 }
+  ]
+}
