@@ -212,3 +212,43 @@ fn lvl_a10_punch_is_deterministic() {
     assert_eq!(first, second, "run 1 and run 2 diverged");
     assert_eq!(second, third, "run 2 and run 3 diverged");
 }
+
+#[test]
+fn lvl_a11_handle_with_care_is_solvable() {
+    let json = include_str!("../levels/A/lvl_a11_handle_with_care.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_a11_handle_with_care did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_a11_handle_with_care_is_deterministic() {
+    let json = include_str!("../levels/A/lvl_a11_handle_with_care.json");
+    let first = subject_final_position(json, 700);
+    let second = subject_final_position(json, 700);
+    let third = subject_final_position(json, 700);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}
+
+#[test]
+fn lvl_a12_clear_the_air_is_solvable() {
+    let json = include_str!("../levels/A/lvl_a12_clear_the_air.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_a12_clear_the_air did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_a12_clear_the_air_is_deterministic() {
+    let json = include_str!("../levels/A/lvl_a12_clear_the_air.json");
+    let first = subject_final_position(json, 560);
+    let second = subject_final_position(json, 560);
+    let third = subject_final_position(json, 560);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}

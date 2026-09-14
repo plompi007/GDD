@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a11_handle_with_care",
+  "title": "Handle With Care",
+  "chapter": "A_FOUNDATIONS",
+  "order": 11,
+  "difficulty": 1,
+  "goalText": "Roll the glass ball gently into the bucket.",
+  "hints": ["Glass survives a gentle roll just fine.", "It's speed that breaks it, not distance."],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "bucket", "partType": "bin_target", "x": 420, "y": -270 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_glass", "x": -145, "y": 60, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "SUBJECT_DESTROYED", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Gentle roll", "parts": [], "connections": [], "expectedSolveTick": 700 }
+  ]
+}

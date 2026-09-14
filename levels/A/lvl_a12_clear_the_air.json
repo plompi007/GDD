@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_a12_clear_the_air",
+  "title": "Clear the Air",
+  "chapter": "A_FOUNDATIONS",
+  "order": 12,
+  "difficulty": 2,
+  "goalText": "The balloon floats into the spike and pops, clearing the way to the bucket.",
+  "hints": ["A rising balloon meets whatever's above it.", "A sharp point pops anything that touches it."],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "spike", "partType": "spike_pin", "x": 300, "y": -230 },
+    { "id": "bucket", "partType": "bin_target", "x": 300, "y": -270 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": -145, "y": 60, "tags": ["SUBJECT"] },
+    { "id": "blocker", "partType": "balloon_lift", "x": 300, "y": -260 }
+  ],
+  "partsBin": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Pop and roll", "parts": [], "connections": [], "expectedSolveTick": 600 }
+  ]
+}
