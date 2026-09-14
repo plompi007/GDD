@@ -9,6 +9,7 @@ pub mod energy_graph;
 pub mod game_state;
 pub mod gear_train;
 pub mod input;
+pub mod level_catalog;
 pub mod level_file_format;
 pub mod level_load;
 pub mod math;

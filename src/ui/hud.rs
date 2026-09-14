@@ -12,6 +12,7 @@
 use bevy::prelude::*;
 
 use crate::game_state::GameState;
+use crate::level_catalog::{cycle_level, LevelIndex};
 use crate::level_load::EditorState;
 use crate::ui::tokens::{palette, radius, SPACE, UI_FONT_MEDIUM, UI_FONT_REGULAR};
 
@@ -26,6 +27,12 @@ struct MainButton;
 
 #[derive(Component)]
 struct MainButtonLabel;
+
+/// Touch half of `level_catalog`'s `LevelSelect`-screen stand-in — `-1`
+/// (previous) or `+1` (next), mirroring `app.rs`'s P/N keyboard shortcut
+/// for platforms with no keyboard (i.e. every Android device).
+#[derive(Component)]
+struct LevelStepButton(i32);
 
 /// Plain text, not icon+text (docs/GDD.md §3.1's "▶ Play" mockup uses a
 /// glyph for compactness in ASCII art) — real icons are stroke-based SVG
@@ -84,11 +91,22 @@ fn spawn_hud(mut commands: Commands, asset_server: Res<AssetServer>, state: Res<
             BackgroundColor(palette::BG_PANEL.with_alpha(0.85)),
         ))
         .with_children(|parent| {
-            parent.spawn((
-                Text::new(state.level.title.clone()),
-                title_font,
-                TextColor(palette::INK_PRIMARY),
-            ));
+            parent
+                .spawn(Node {
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    column_gap: Val::Px(SPACE[2]),
+                    ..default()
+                })
+                .with_children(|parent| {
+                    spawn_level_step_button(parent, &button_font, -1, "‹");
+                    parent.spawn((
+                        Text::new(state.level.title.clone()),
+                        title_font,
+                        TextColor(palette::INK_PRIMARY),
+                    ));
+                    spawn_level_step_button(parent, &button_font, 1, "›");
+                });
             parent.spawn((
                 GoalText,
                 Text::new(state.level.goal_text.clone().unwrap_or_default()),
@@ -139,6 +157,38 @@ fn spawn_hud(mut commands: Commands, asset_server: Res<AssetServer>, state: Res<
         });
 }
 
+/// A small square tap target (44pt, touch-friendly) carrying a
+/// [`LevelStepButton`] — spawned as a child of the caller's current
+/// `with_children` parent, flanking the title on either side.
+fn spawn_level_step_button(
+    parent: &mut ChildSpawnerCommands,
+    font: &TextFont,
+    step: i32,
+    glyph: &str,
+) {
+    parent
+        .spawn((
+            LevelStepButton(step),
+            Button,
+            Node {
+                width: Val::Px(44.0),
+                height: Val::Px(44.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(palette::BG_PANEL),
+            BorderRadius::all(Val::Px(radius::PILL)),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text::new(glyph),
+                font.clone(),
+                TextColor(palette::INK_PRIMARY),
+            ));
+        });
+}
+
 /// Both the top bar and the bottom button row are tagged `HudRoot` (Bevy
 /// 0.16's `despawn()` recursively despawns descendants, so despawning
 /// each root takes its children — title text, the button, its label —
@@ -173,11 +223,32 @@ fn main_button_interaction(
     }
 }
 
+/// Touch equivalent of `app.rs`'s N/P keys — see [`LevelStepButton`].
+fn level_step_button_interaction(
+    mut interactions: Query<(&Interaction, &LevelStepButton), Changed<Interaction>>,
+    mut index: ResMut<LevelIndex>,
+    mut editor_state: ResMut<EditorState>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for (interaction, step) in &mut interactions {
+        if *interaction == Interaction::Pressed {
+            cycle_level(step.0, &mut index, &mut editor_state, &mut next_state);
+        }
+    }
+}
+
 pub struct HudPlugin;
 
 impl Plugin for HudPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Edit), (despawn_hud, spawn_hud).chain())
-            .add_systems(Update, (sync_main_button_label, main_button_interaction));
+            .add_systems(
+                Update,
+                (
+                    sync_main_button_label,
+                    main_button_interaction,
+                    level_step_button_interaction,
+                ),
+            );
     }
 }
