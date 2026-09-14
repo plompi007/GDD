@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c05_needle_point",
+  "title": "Needle Point",
+  "chapter": "C_TIMING",
+  "order": 5,
+  "difficulty": 3,
+  "goalText": "Wake the fan before the balloon drifts straight up into the spike.",
+  "hints": [
+    "A balloon rises on its own, spike or no spike.",
+    "Only a sideways push can carry it clear."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 25 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "switch", "partType": "switch_plate", "x": 0, "y": -266,
+      "params": { "mode": "toggle" } },
+    { "id": "fan", "partType": "fan_blower", "x": 100, "y": -260, "params": { "power": 6 } },
+    { "id": "spike", "partType": "spike_pin", "x": 120, "y": 150 },
+    { "id": "goal", "partType": "goal_zone", "x": 310, "y": 95 }
+  ],
+  "preplacedParts": [
+    { "id": "trigger", "partType": "ball_iron", "x": 0, "y": 80 },
+    { "id": "subject", "partType": "balloon_lift", "x": 120, "y": -250, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "fan", "anchorIdx": 0 } }
+  ],
+  "winConditions": [
+    { "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal" }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "SUBJECT_DESTROYED", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Wake the fan first", "parts": [], "connections": [], "expectedSolveTick": 450 }
+  ]
+}
