@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_b16_rise_and_shine",
+  "title": "Rise and Shine",
+  "chapter": "B_COMBOS",
+  "order": 16,
+  "difficulty": 2,
+  "goalText": "Let the balloon rise into the plate and start the belt.",
+  "hints": [
+    "A balloon rises on its own.",
+    "The plate only needs a touch, from any direction."
+  ],
+  "world": { "width": 1400, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "switch", "partType": "switch_plate", "x": 100, "y": -100,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 200, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 235, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 280, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 550, "y": -50 },
+    { "id": "wall", "partType": "wall_brick", "x": 676, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 644, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "balloon", "partType": "balloon_lift", "x": 100, "y": -260 },
+    { "id": "subject", "partType": "ball_wood", "x": 470, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Float up", "parts": [], "connections": [], "expectedSolveTick": 700 }
+  ]
+}
