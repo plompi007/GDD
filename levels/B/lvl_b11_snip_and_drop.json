@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_b11_snip_and_drop",
+  "title": "Snip and Drop",
+  "chapter": "B_COMBOS",
+  "order": 11,
+  "difficulty": 3,
+  "goalText": "Trigger the shears — they pop the balloon blocking the drop, and gravity does the rest.",
+  "hints": [
+    "The shears pop anything soft nearby, not just ropes.",
+    "The ball won't fall past the balloon until it's gone."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "cutter", "partType": "cutter_shears", "x": 150, "y": -266 },
+    { "id": "bin", "partType": "bin_target", "x": 150, "y": -270 }
+  ],
+  "preplacedParts": [
+    { "id": "trigger", "partType": "ball_iron", "x": -145, "y": 60 },
+    { "id": "blocker", "partType": "balloon_lift", "x": 150, "y": -200 },
+    { "id": "subject", "partType": "ball_wood", "x": 150, "y": 50, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Snip it clear", "parts": [], "connections": [], "expectedSolveTick": 500 }
+  ]
+}
