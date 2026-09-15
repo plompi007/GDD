@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c10_no_time_to_spare",
+  "title": "No Time to Spare",
+  "chapter": "C_TIMING",
+  "order": 10,
+  "difficulty": 3,
+  "goalText": "Get moving right away — the plate, the wind, and the belt all need their turn before time runs out.",
+  "hints": [
+    "The plate only needs a touch.",
+    "There's no time to waste between steps."
+  ],
+  "world": { "width": 1800, "height": 1200, "gravityY": 9.81, "timeLimitSec": 17 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "switch1", "partType": "switch_plate", "x": 150, "y": -266,
+      "params": { "mode": "toggle" } },
+    { "id": "fan", "partType": "fan_blower", "x": 220, "y": -260, "params": { "power": 10 } },
+    { "id": "switch2", "partType": "switch_plate", "x": 320, "y": -266,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 420, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 455, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 500, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 650, "y": -50 },
+    { "id": "wall", "partType": "wall_brick", "x": 776, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 744, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "trigger", "partType": "ball_iron", "x": -145, "y": 60 },
+    { "id": "roller", "partType": "ball_rubber", "x": 240, "y": -260 },
+    { "id": "subject", "partType": "ball_wood", "x": 570, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power1", "kind": "WIRE", "from": { "partId": "switch1", "anchorIdx": 0 },
+      "to": { "partId": "fan", "anchorIdx": 0 } },
+    { "id": "c_power2", "kind": "WIRE", "from": { "partId": "switch2", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "No delays", "parts": [], "connections": [], "expectedSolveTick": 850 }
+  ]
+}
