@@ -210,3 +210,23 @@ fn lvl_d07_gentle_command_is_deterministic() {
     assert_eq!(first, second, "run 1 and run 2 diverged");
     assert_eq!(second, third, "run 2 and run 3 diverged");
 }
+
+#[test]
+fn lvl_d08_punch_the_line_is_solvable() {
+    let json = include_str!("../levels/D/lvl_d08_punch_the_line.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_d08_punch_the_line did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_d08_punch_the_line_is_deterministic() {
+    let json = include_str!("../levels/D/lvl_d08_punch_the_line.json");
+    let first = subject_final_position(json, 935);
+    let second = subject_final_position(json, 935);
+    let third = subject_final_position(json, 935);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}
