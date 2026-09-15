@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c09_punch_the_flame",
+  "title": "Punch and Beat the Flame",
+  "chapter": "C_TIMING",
+  "order": 9,
+  "difficulty": 3,
+  "goalText": "Light the fuse first — the punch sends the ball fast, but the wall needs to be gone.",
+  "hints": [
+    "A burning fuse takes real time to reach the far end.",
+    "A punch adds one clean burst of speed."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "punch", "partType": "punch_arm", "x": 150, "y": -266,
+      "params": { "power": 80 } },
+    { "id": "candle", "partType": "candle", "x": 300, "y": -100 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 350, "y": -100 },
+    { "id": "barrel_shelf", "partType": "plank_wood", "x": 400, "y": -123 },
+    { "id": "barrel", "partType": "charge_barrel", "x": 400, "y": -90 },
+    { "id": "wall", "partType": "wall_brick", "x": 460, "y": -220 },
+    { "id": "bucket", "partType": "bin_target", "x": 730, "y": -270 },
+    { "id": "stopper", "partType": "wall_brick", "x": 786, "y": -220 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_wood", "x": -145, "y": 60, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Fuse first, punch second", "parts": [], "connections": [], "expectedSolveTick": 900 }
+  ]
+}
