@@ -4,12 +4,19 @@
 //! input layer, mapped differently" framing.
 //!
 //! Editing only runs in `GameState::Edit` (CLAUDE.md rule 4: `EditorState`
-//! is read-only once `Running`). Scope note: rotate/flip/inspector/delete
-//! (§3.4), the rope/belt connect tool (§3.5), and camera pan/zoom (§3.6)
-//! are UI chrome or separate polish, not implemented here — placing a new
-//! part from the bin (`crate::ui::parts_bin::BinSlot`, M6's real bevy_ui
-//! chrome) and repositioning an already-placed one is the mechanic this
-//! module proves works identically on mouse and touch.
+//! is read-only once `Running`). Scope note: placing a new part from the
+//! bin (`crate::ui::parts_bin::BinSlot`, M6's real bevy_ui chrome) and
+//! repositioning an already-placed one is the mechanic that proves this
+//! works identically on mouse and touch. M9/Sandbox adds the delete and
+//! rotate mechanics ([`SelectedPart`]/[`EditorActionRequest`]) the same
+//! way — a testable resource-driven action, with the real button/gesture
+//! that sets it (§3.4) left as bevy_ui chrome for later, same as
+//! `PointerState` itself versus its two real OS adapters below. `flip_x`/
+//! `flip_y` stay unimplemented here on purpose: no shipped part has an
+//! asymmetric collider, so flipping one currently has zero physical or
+//! visual effect to test against — wiring a no-op action would be dead
+//! code. The rope/belt/wire connect tool (§3.5) and camera pan/zoom
+//! (§3.6) remain separate, not touched by this module.
 
 use bevy::input::touch::Touches;
 use bevy::prelude::*;
@@ -96,6 +103,24 @@ enum DragSource {
 #[derive(Resource, Default)]
 struct DragState(Option<DragSource>);
 
+/// The part a delete/rotate action (below) applies to — set whenever a
+/// press picks up an existing placed part (same hit-test as starting a
+/// drag), cleared on a press that hits nothing. Never a fixed part:
+/// `hit_test_placed_part` already excludes those.
+#[derive(Resource, Default)]
+pub struct SelectedPart(pub Option<Entity>);
+
+/// One-shot flags for the M9/Sandbox editor actions that don't fit the
+/// press/drag/release gesture above (docs/GDD.md §3.4, M6 debt) — a real
+/// delete/rotate button is bevy_ui chrome for later; this is the testable
+/// mechanic underneath it, following the exact pattern `PointerState`
+/// already established for headless tests to drive directly.
+#[derive(Resource, Default)]
+pub struct EditorActionRequest {
+    pub delete_selected: bool,
+    pub rotate_selected: bool,
+}
+
 fn hit_test_placed_part(
     pointer_pos: Vec2,
     state: &EditorState,
@@ -165,6 +190,7 @@ fn start_bin_drag_system(
 fn start_existing_part_drag_system(
     pointer: Res<PointerState>,
     mut drag: ResMut<DragState>,
+    mut selected: ResMut<SelectedPart>,
     editor_state: Res<EditorState>,
     placed: Query<(Entity, &PlacedId, &Transform), (With<LevelEntity>, Without<PlacedGhost>)>,
 ) {
@@ -174,8 +200,71 @@ fn start_existing_part_drag_system(
     let Some(world_pos) = pointer.world_pos else {
         return;
     };
-    if let Some(entity) = hit_test_placed_part(world_pos, &editor_state, &placed) {
+    let hit = hit_test_placed_part(world_pos, &editor_state, &placed);
+    // A press on empty space deselects — same gesture a real editor uses,
+    // and it means [`apply_editor_actions_system`] never acts on a stale
+    // selection from a part the player has since clicked away from.
+    selected.0 = hit;
+    if let Some(entity) = hit {
         drag.0 = Some(DragSource::ExistingPart { entity });
+    }
+}
+
+/// Applies a pending delete/rotate request (set on [`EditorActionRequest`],
+/// e.g. by a future delete/rotate button — see that resource's own docs)
+/// to whatever [`SelectedPart`] currently holds, then clears both the
+/// request and (for delete) the selection. Runs after the drag systems so
+/// a delete can't race an in-progress drag of the same entity.
+fn apply_editor_actions_system(
+    mut actions: ResMut<EditorActionRequest>,
+    mut selected: ResMut<SelectedPart>,
+    mut editor_state: ResMut<EditorState>,
+    registry: Res<PartRegistry>,
+    mut commands: Commands,
+    mut placed: Query<(&PlacedId, &mut Transform), With<LevelEntity>>,
+) {
+    let delete_requested = std::mem::take(&mut actions.delete_selected);
+    let rotate_requested = std::mem::take(&mut actions.rotate_selected);
+    if !delete_requested && !rotate_requested {
+        return;
+    }
+    let Some(entity) = selected.0 else {
+        return;
+    };
+    let Ok((id, mut transform)) = placed.get_mut(entity) else {
+        selected.0 = None;
+        return;
+    };
+
+    if delete_requested {
+        let id = id.0.clone();
+        editor_state
+            .level
+            .preplaced_parts
+            .retain(|part| part.id != id);
+        commands.entity(entity).despawn();
+        selected.0 = None;
+        return;
+    }
+
+    if rotate_requested {
+        let id = id.0.clone();
+        let Some(part) = editor_state
+            .level
+            .preplaced_parts
+            .iter_mut()
+            .find(|p| p.id == id)
+        else {
+            return;
+        };
+        let Some(def) = registry.get(&part.part_type) else {
+            return;
+        };
+        if !def.editor.rotatable || def.editor.rotation_snap <= 0.0 {
+            return;
+        }
+        part.rotation = (part.rotation + def.editor.rotation_snap) % 360.0;
+        transform.rotation = Quat::from_rotation_z(part.rotation.to_radians());
     }
 }
 
@@ -303,6 +392,8 @@ impl Plugin for EditorInputPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PointerState>()
             .init_resource::<DragState>()
+            .init_resource::<SelectedPart>()
+            .init_resource::<EditorActionRequest>()
             .add_systems(
                 Update,
                 (
@@ -310,6 +401,7 @@ impl Plugin for EditorInputPlugin {
                     start_existing_part_drag_system,
                     update_drag_system,
                     end_drag_system,
+                    apply_editor_actions_system,
                 )
                     .chain()
                     .run_if(in_state(GameState::Edit)),

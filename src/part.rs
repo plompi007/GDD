@@ -6,7 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
@@ -83,7 +83,10 @@ pub struct BodySpec {
     pub sensor: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+/// `Serialize` is for M9's sandbox save/load round-trip
+/// (`level_file_format.rs`'s `Condition::EnergyState` embeds this) — not
+/// needed for `PartDef` loading itself, which stays read-only.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum EnergyType {
     Rotary,

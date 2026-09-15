@@ -13,7 +13,7 @@ use bevy::time::TimeUpdateStrategy;
 use bevy::transform::TransformPlugin;
 
 use chainworks::game_state::GameState;
-use chainworks::input::{EditorInputPlugin, PointerState};
+use chainworks::input::{EditorActionRequest, EditorInputPlugin, PointerState, SelectedPart};
 use chainworks::level_file_format::LevelFile;
 use chainworks::level_load::LevelPlugin;
 use chainworks::parts::PartsPlugin;
@@ -150,4 +150,88 @@ fn placing_a_plank_consumes_it_from_the_parts_bin() {
         .resource::<chainworks::level_load::EditorState>();
     assert_eq!(editor_state.level.parts_bin[0].count, 0);
     assert_eq!(editor_state.level.preplaced_parts.len(), 2); // subject + the placed plank
+}
+
+/// A tap-and-release on an already-placed part's own position, with no
+/// movement in between — selects it (`start_existing_part_drag_system`'s
+/// hit-test) without relocating it, mirroring the real click/tap gesture
+/// M9's delete/rotate actions are meant to apply to.
+fn tap_to_select(app: &mut App, world_pos: Vec2) {
+    set_pointer(app, world_pos, true, false);
+    app.world_mut().resource_mut::<PointerState>().just_pressed = true;
+    app.update();
+    app.world_mut().resource_mut::<PointerState>().just_pressed = false;
+    app.update();
+    set_pointer(app, world_pos, false, true);
+    app.update();
+    set_pointer(app, world_pos, false, false);
+    app.update();
+}
+
+#[test]
+fn deleting_the_selected_plank_removes_it_and_the_level_can_no_longer_solve() {
+    let mut app = build_app();
+    let bin_slot = spawn_bin_slot_for_test(&mut app, "plank_wood", 0);
+    drag_plank_from_bin_to(&mut app, bin_slot, DROP_POS);
+    tap_to_select(&mut app, DROP_POS);
+    assert!(
+        app.world().resource::<SelectedPart>().0.is_some(),
+        "tapping the placed plank should select it"
+    );
+
+    app.world_mut()
+        .resource_mut::<EditorActionRequest>()
+        .delete_selected = true;
+    app.update();
+
+    let editor_state = app
+        .world()
+        .resource::<chainworks::level_load::EditorState>();
+    assert_eq!(
+        editor_state.level.preplaced_parts.len(),
+        1,
+        "only the subject should remain once the plank is deleted"
+    );
+    assert!(app.world().resource::<SelectedPart>().0.is_none());
+    assert!(
+        !run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "level solved itself after the only plank was deleted — nothing should catch the ball"
+    );
+}
+
+#[test]
+fn rotating_the_selected_plank_updates_both_editor_state_and_the_live_transform() {
+    let mut app = build_app();
+    let bin_slot = spawn_bin_slot_for_test(&mut app, "plank_wood", 0);
+    drag_plank_from_bin_to(&mut app, bin_slot, DROP_POS);
+    tap_to_select(&mut app, DROP_POS);
+
+    app.world_mut()
+        .resource_mut::<EditorActionRequest>()
+        .rotate_selected = true;
+    app.update();
+
+    // plank_wood's own data/parts/plank_wood.json declares rotationSnap: 15.
+    let editor_state = app
+        .world()
+        .resource::<chainworks::level_load::EditorState>();
+    let plank = editor_state
+        .level
+        .preplaced_parts
+        .iter()
+        .find(|p| p.part_type == "plank_wood")
+        .expect("plank must still be placed");
+    assert_eq!(plank.rotation, 15.0);
+
+    let selected = app
+        .world()
+        .resource::<SelectedPart>()
+        .0
+        .expect("plank should still be selected after rotating");
+    let transform = app.world().get::<Transform>(selected).unwrap();
+    let live_rotation_deg = transform.rotation.to_euler(EulerRot::XYZ).2.to_degrees();
+    assert!(
+        (live_rotation_deg - 15.0).abs() < 0.01,
+        "live Transform rotation should match the 15-degree snap, got {live_rotation_deg}"
+    );
 }

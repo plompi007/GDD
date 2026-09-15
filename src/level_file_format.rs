@@ -3,8 +3,12 @@
 //! *only* place that knows what a level JSON file looks like — loading
 //! (`level_load.rs`) and win-condition evaluation (`win_conditions.rs`)
 //! both build on these types instead of touching JSON directly.
+//!
+//! `Serialize` (docs/GDD.md's M9/Sandbox spec) exists so a `LevelFile`
+//! built live in Sandbox mode can be written back out through the exact
+//! same schema every official level already parses — not a second format.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::part::EnergyType;
 
@@ -30,7 +34,7 @@ fn default_scale() -> f32 {
     1.0
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Chapter {
     #[serde(rename = "A_FOUNDATIONS")]
     AFoundations,
@@ -42,7 +46,7 @@ pub enum Chapter {
     DMaster,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldConfig {
     #[serde(default = "default_world_width")]
@@ -57,14 +61,14 @@ pub struct WorldConfig {
     pub theme: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum RotaryDirection {
     Cw,
     Ccw,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SwitchMode {
     Toggle,
@@ -75,7 +79,7 @@ pub enum SwitchMode {
 /// §5.1 `placedPart.params`). Every field is optional: which ones apply
 /// depends on the part type, validated against `PartDef.params` at load
 /// time (M4+, once parts with real params exist) rather than here.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacedPartParams {
     pub rpm: Option<f32>,
@@ -89,7 +93,7 @@ pub struct PlacedPartParams {
     pub mode: Option<SwitchMode>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacedPart {
     pub id: String,
@@ -110,7 +114,7 @@ pub struct PlacedPart {
     pub params: PlacedPartParams,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum ConnectionKind {
     Rope,
@@ -118,7 +122,7 @@ pub enum ConnectionKind {
     Wire,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnchorRef {
     pub part_id: String,
@@ -126,7 +130,7 @@ pub struct AnchorRef {
     pub anchor_idx: u32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Connection {
     pub id: String,
@@ -141,7 +145,7 @@ pub struct Connection {
 /// One win/fail condition (docs/GDD.md §5.1 `definitions.condition` — the
 /// schema uses a single flat type for both `winConditions` and
 /// `failConditions`, so this enum covers every variant from both).
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(
     tag = "type",
     rename_all = "SCREAMING_SNAKE_CASE",
@@ -183,7 +187,7 @@ pub enum Condition {
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PartsBinEntry {
     pub part_type: String,
@@ -192,7 +196,7 @@ pub struct PartsBinEntry {
     pub locked_params: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Solution {
     pub label: String,
@@ -203,7 +207,7 @@ pub struct Solution {
 }
 
 /// One `levels/**/*.json` file, deserialized as-is (docs/GDD.md §5.1/§5.2).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LevelFile {
     pub schema_version: u32,
@@ -244,5 +248,32 @@ mod tests {
         assert_eq!(level.id, "lvl_a03_pulley_lift");
         assert_eq!(level.win_conditions.len(), 1);
         assert_eq!(level.solutions.len(), 2);
+    }
+
+    /// M9/Sandbox's foundation: a level round-tripped through
+    /// `serde_json::to_string`/`from_str` must parse back into a
+    /// `LevelFile` that produces the *same* JSON again — proving `Serialize`
+    /// really does write the same schema `Deserialize` already reads,
+    /// not a drifted lookalike. Runs this against every one of the 60
+    /// built-in levels (`ALL_LEVELS`), not just one hand-picked example,
+    /// since a save bug might only show up on a level using a field the
+    /// simple example doesn't (e.g. `Condition::AllOf`, `routedThrough`).
+    #[test]
+    fn every_official_level_round_trips_through_save_and_load() {
+        for (index, json) in crate::level_catalog::ALL_LEVELS.iter().enumerate() {
+            let original: LevelFile = serde_json::from_str(json)
+                .unwrap_or_else(|e| panic!("ALL_LEVELS[{index}] failed to parse: {e}"));
+            let saved = serde_json::to_string(&original)
+                .unwrap_or_else(|e| panic!("ALL_LEVELS[{index}] failed to serialize: {e}"));
+            let reloaded: LevelFile = serde_json::from_str(&saved)
+                .unwrap_or_else(|e| panic!("ALL_LEVELS[{index}] failed to re-parse: {e}"));
+            let saved_again = serde_json::to_string(&reloaded)
+                .unwrap_or_else(|e| panic!("ALL_LEVELS[{index}] failed to re-serialize: {e}"));
+            assert_eq!(
+                saved, saved_again,
+                "ALL_LEVELS[{index}] ({}) changed on a second save/load round trip",
+                original.id
+            );
+        }
     }
 }
