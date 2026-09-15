@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c11_two_ways_to_cut",
+  "title": "Two Ways to Cut",
+  "chapter": "C_TIMING",
+  "order": 11,
+  "difficulty": 3,
+  "goalText": "The shears beat the flame to the rope — either one would have done it.",
+  "hints": [
+    "A held rope keeps a hanging weight from falling.",
+    "Fire isn't the only way to cut a rope."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "pulley", "partType": "pulley_wheel", "x": 100, "y": 250 },
+    { "id": "bin", "partType": "bin_target", "x": 100, "y": -270 },
+    { "id": "catch_left", "partType": "wall_brick", "x": 44, "y": -220 },
+    { "id": "catch_right", "partType": "wall_brick", "x": 156, "y": -220 },
+    { "id": "candle", "partType": "candle", "x": -5, "y": 200 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 45, "y": 200 },
+    { "id": "cutter", "partType": "cutter_shears", "x": 100, "y": 200 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_iron", "x": 100, "y": 150, "tags": ["SUBJECT"] },
+    { "id": "weight", "partType": "ball_lead", "x": -100, "y": -270 },
+    { "id": "trigger", "partType": "ball_lead", "x": 100, "y": 260 }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_rope", "kind": "ROPE", "from": { "partId": "weight" },
+      "to": { "partId": "subject" }, "routedThrough": [{ "partId": "pulley" }],
+      "maxLength": 665 }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Cut it quick", "parts": [], "connections": [], "expectedSolveTick": 300 }
+  ]
+}
