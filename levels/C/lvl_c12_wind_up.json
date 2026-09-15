@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c12_wind_up",
+  "title": "Wind-Up",
+  "chapter": "C_TIMING",
+  "order": 12,
+  "difficulty": 4,
+  "goalText": "Light the fuse — the wall needs to fall before the plate, gears, and belt can finish the job in time.",
+  "hints": [
+    "A burning fuse takes real time to reach the far end.",
+    "Each meshed gear flips the direction of the one before it."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 20 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "candle", "partType": "candle", "x": -10, "y": -100 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 40, "y": -100 },
+    { "id": "barrel_shelf", "partType": "plank_wood", "x": 90, "y": -123 },
+    { "id": "barrel", "partType": "charge_barrel", "x": 90, "y": -90 },
+    { "id": "wall", "partType": "wall_brick", "x": 150, "y": -220 },
+    { "id": "switch", "partType": "switch_plate", "x": 250, "y": -270,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 350, "y": 100,
+      "params": { "rpm": 120, "direction": "CW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 385, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 430, "y": 100 },
+    { "id": "gear3", "partType": "gear_small", "x": 478, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 700, "y": -50 },
+    { "id": "wall2", "partType": "wall_brick", "x": 826, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 794, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "trigger", "partType": "ball_iron", "x": -145, "y": 60 },
+    { "id": "subject", "partType": "ball_wood", "x": 620, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear3" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Fire, plate, gears", "parts": [], "connections": [], "expectedSolveTick": 900 }
+  ]
+}
