@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c13_hurry_gently",
+  "title": "Hurry, Gently",
+  "chapter": "C_TIMING",
+  "order": 13,
+  "difficulty": 3,
+  "goalText": "Get the glass ball to the bucket before time runs out — but a hard landing breaks it too.",
+  "hints": [
+    "Glass survives a gentle roll just fine.",
+    "There's no time to waste, but no room to rush it either."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 13 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "bucket", "partType": "bin_target", "x": 420, "y": -270 }
+  ],
+  "preplacedParts": [
+    { "id": "subject", "partType": "ball_glass", "x": -145, "y": 60, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bucket", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "SUBJECT_DESTROYED", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Gentle and quick", "parts": [], "connections": [], "expectedSolveTick": 700 }
+  ]
+}
