@@ -1,14 +1,21 @@
-name: Android debug build (M3.5)
+name: Android build (debug + release)
 
 # M3.5 (docs/GDD.md §3.5/§7.6): the dev sandbox this project is built in
 # cannot reach dl.google.com (org network policy), so it cannot fetch the
 # Android NDK and cross-compile/link locally. GitHub Actions runners have
 # normal internet access, so this workflow does the actual APK build.
 #
-# This is a *debug* smoke-test build only, self-signed by cargo-apk's
-# built-in debug keystore, for installing via `adb install` on a personal
-# device to confirm the app boots at all on real Android. Release
-# signing/Play Store upload is M7/M10/M11 work, not this workflow.
+# `android-debug-apk` is a *debug* smoke-test build only, self-signed by
+# cargo-apk's built-in debug keystore, for installing via `adb install` on
+# a personal device to confirm the app boots at all on real Android.
+#
+# `android-release-apk` (docs/GDD.md §7.8, M10/M11 prep) builds a real
+# release-signed APK, but only once the developer has created their own
+# keystore and added it as repo secrets — see that job's own comment. It
+# is entirely gated on those secrets existing, so until then it just
+# shows as "skipped" and can never break the debug build above. Nothing
+# in this workflow creates or holds a long-lived signing identity on the
+# developer's behalf.
 
 on:
   workflow_dispatch: {}
@@ -95,4 +102,69 @@ jobs:
         with:
           name: chainworks-debug-apk
           path: target/debug/apk/*.apk
+          if-no-files-found: error
+
+  # docs/GDD.md §7.8: skipped entirely unless the developer has already
+  # added ANDROID_KEYSTORE_BASE64 (their own keystore, base64-encoded) and
+  # ANDROID_KEYSTORE_PASSWORD as repo secrets — nobody else's push can
+  # trigger a real signed build, and the debug job above is unaffected
+  # either way. cargo-apk reads the keystore path/password from
+  # CARGO_APK_RELEASE_KEYSTORE(_PASSWORD), which override
+  # [package.metadata.android.signing.release] in Cargo.toml (neither is
+  # set there — this workflow is the only signing path). Unverified
+  # end-to-end (no real keystore exists to test against from here) — the
+  # developer's first real run of this job is also its first real test.
+  android-release-apk:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    timeout-minutes: 60
+    env:
+      CARGO_PROFILE_RELEASE_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h /
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-aarch64-linux-android-release
+
+      - name: Install cargo-apk
+        run: cargo install cargo-apk
+
+      - name: Install Android NDK + platform
+        run: |
+          sdkmanager --install "ndk;26.1.10909125"
+          sdkmanager --install "platforms;android-30"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
+
+      - name: Decode signing keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      - name: Build release APK
+        env:
+          CARGO_APK_RELEASE_KEYSTORE: ${{ runner.temp }}/release.keystore
+          CARGO_APK_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: cargo apk build --release --lib
+
+      - name: Remove decoded keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.keystore"
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: chainworks-release-apk
+          path: target/release/apk/*.apk
           if-no-files-found: error
