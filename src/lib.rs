@@ -15,6 +15,7 @@ pub mod level_load;
 pub mod math;
 pub mod part;
 pub mod parts;
+pub mod render;
 pub mod rope_network;
 pub mod save_load;
 pub mod scenes;

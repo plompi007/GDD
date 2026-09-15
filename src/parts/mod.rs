@@ -114,13 +114,22 @@ pub struct PartsPlugin;
 
 impl Plugin for PartsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(build_registry()).add_plugins((
-            outlet_power::OutletPowerPlugin,
-            conveyor::ConveyorPlugin,
-            switch_plate::SwitchPlatePlugin,
-            cutter_shears::CutterShearsPlugin,
-            punch_arm::PunchArmPlugin,
-        ));
+        // `render::decorate`/`body_factory::spawn_part` need these
+        // (`Mesh2d`/`MeshMaterial2d<ColorMaterial>` for a real circle mesh
+        // and per-part cosmetic shapes) even in this project's headless
+        // `MinimalPlugins`-based tests, which never add bevy's rendering
+        // plugins. Both resources implement `Default`, and `init_resource`
+        // no-ops if `DefaultPlugins` already inserted them in the real app.
+        app.init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .insert_resource(build_registry())
+            .add_plugins((
+                outlet_power::OutletPowerPlugin,
+                conveyor::ConveyorPlugin,
+                switch_plate::SwitchPlatePlugin,
+                cutter_shears::CutterShearsPlugin,
+                punch_arm::PunchArmPlugin,
+            ));
     }
 }
 

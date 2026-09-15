@@ -449,12 +449,15 @@ fn update_drag_system(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn end_drag_system(
     pointer: Res<PointerState>,
     mut drag: ResMut<DragState>,
     mut editor_state: ResMut<EditorState>,
     registry: Res<PartRegistry>,
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut counter: Local<u64>,
     placed: Query<(&PlacedId, &Transform), With<LevelEntity>>,
     ghosts: Query<Entity, With<PlacedGhost>>,
@@ -495,7 +498,7 @@ fn end_drag_system(
                 params: Default::default(),
             };
             editor_state.level.preplaced_parts.push(new_part.clone());
-            spawn_placed_part(&mut commands, &registry, &new_part);
+            spawn_placed_part(&mut commands, &mut meshes, &mut materials, &registry, &new_part);
         }
         DragSource::ExistingPart { entity } => {
             // `update_drag_system` already grid-snapped this entity's live

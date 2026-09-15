@@ -46,6 +46,8 @@ pub struct EditorState {
 
 pub(crate) fn spawn_placed_part(
     commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
     registry: &PartRegistry,
     placed: &PlacedPart,
 ) -> Entity {
@@ -57,6 +59,8 @@ pub(crate) fn spawn_placed_part(
     });
     let entity = spawn_part(
         commands,
+        meshes,
+        materials,
         def,
         Vec2::new(placed.x, placed.y),
         placed.rotation,
@@ -224,6 +228,8 @@ fn spawn_connections(
 /// operation on purpose.
 pub fn reset_level(
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     registry: Res<PartRegistry>,
     state: Res<EditorState>,
     mut energy: ResMut<EnergyGraph>,
@@ -247,7 +253,7 @@ pub fn reset_level(
     let mut id_to_entity = BTreeMap::new();
     let mut placed_lookup = BTreeMap::new();
     for placed in &placed_parts {
-        let entity = spawn_placed_part(&mut commands, &registry, placed);
+        let entity = spawn_placed_part(&mut commands, &mut meshes, &mut materials, &registry, placed);
         id_to_entity.insert(placed.id.clone(), entity);
         placed_lookup.insert(placed.id.clone(), *placed);
     }

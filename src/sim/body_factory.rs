@@ -35,9 +35,16 @@ pub fn placeholder_color(def: &PartDef) -> Color {
 
 /// Spawns one entity from a [`PartDef`]. `translation` is in pixels;
 /// `rotation_degrees` follows Bevy's +z-out-of-screen convention (positive
-/// = counter-clockwise).
+/// = counter-clockwise). `meshes`/`materials` back the base shape for
+/// `ShapeSpec::Ball` (a real circle mesh, replacing a square `Sprite` that
+/// only ever matched the collider's bounding box) and `render::decorate`'s
+/// cosmetic child shapes (gear teeth, a candle flame, ...) — `ShapeSpec::Box`
+/// keeps using a plain `Sprite`, since a flat rectangle already matches its
+/// own collider exactly.
 pub fn spawn_part(
     commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
     def: &PartDef,
     translation: Vec2,
     rotation_degrees: f32,
@@ -50,10 +57,6 @@ pub fn spawn_part(
         ShapeSpec::Ball { radius } => Collider::ball(radius),
         ShapeSpec::Box { w, h } => Collider::cuboid(w / 2.0, h / 2.0),
     };
-    let sprite_size = match def.body.shape {
-        ShapeSpec::Ball { radius } => Vec2::splat(radius * 2.0),
-        ShapeSpec::Box { w, h } => Vec2::new(w, h),
-    };
     let rigid_body = match def.body.kind {
         BodyKind::Fixed => RigidBody::Fixed,
         BodyKind::Dynamic => RigidBody::Dynamic,
@@ -65,7 +68,6 @@ pub fn spawn_part(
         Friction::new(def.body.friction),
         Restitution::new(def.body.restitution),
         transform,
-        Sprite::from_color(color, sprite_size),
         // Every collider gets contact events, not just sensors: tag-rule
         // reactions (docs/GDD.md §1.4.2 — SHARP popping POPPABLE, etc.) and
         // IMPACT-triggered parts (switch_plate, punch_arm, cutter_shears)
@@ -73,6 +75,18 @@ pub fn spawn_part(
         // bodies too, not just Sensor-marked ones.
         ActiveEvents::COLLISION_EVENTS,
     ));
+
+    match def.body.shape {
+        ShapeSpec::Ball { radius } => {
+            entity.insert((
+                Mesh2d(meshes.add(Circle::new(radius))),
+                MeshMaterial2d(materials.add(color)),
+            ));
+        }
+        ShapeSpec::Box { w, h } => {
+            entity.insert(Sprite::from_color(color, Vec2::new(w, h)));
+        }
+    }
 
     if def.body.sensor {
         // CollidingEntities only updates from CollisionEvent (docs: bevy_rapier2d
@@ -113,5 +127,7 @@ pub fn spawn_part(
         }
     }
 
-    entity.id()
+    let id = entity.id();
+    crate::render::decorate(commands, meshes, materials, id, def);
+    id
 }
