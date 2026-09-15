@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c08_burn_and_deliver",
+  "title": "Burn and Deliver",
+  "chapter": "C_TIMING",
+  "order": 8,
+  "difficulty": 4,
+  "goalText": "Light the fuse — once the rope burns through, the drop starts the belt.",
+  "hints": [
+    "Fire doesn't only work on fuses and charges.",
+    "A rope held up by nothing but itself won't wait for you."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "candle", "partType": "candle", "x": -100, "y": 200 },
+    { "id": "fuse", "partType": "fuse_cord", "x": -60, "y": 200 },
+    { "id": "pulley", "partType": "pulley_wheel", "x": 0, "y": 250 },
+    { "id": "switch", "partType": "switch_plate", "x": 0, "y": -266,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 200, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 235, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 280, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 550, "y": -50 },
+    { "id": "wall", "partType": "wall_brick", "x": 676, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 644, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "anchor", "partType": "ball_lead", "x": -250, "y": -270 },
+    { "id": "hanging", "partType": "ball_iron", "x": 0, "y": 150 },
+    { "id": "subject", "partType": "ball_wood", "x": 470, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_rope", "kind": "ROPE", "from": { "partId": "anchor" },
+      "to": { "partId": "hanging" }, "routedThrough": [{ "partId": "pulley" }],
+      "maxLength": 690 },
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Burn, drop, roll", "parts": [], "connections": [], "expectedSolveTick": 1200 }
+  ]
+}
