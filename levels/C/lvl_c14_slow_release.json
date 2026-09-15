@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c14_slow_release",
+  "title": "Slow Release",
+  "chapter": "C_TIMING",
+  "order": 14,
+  "difficulty": 3,
+  "goalText": "Light the fuse — once it burns through the tether, the balloon does the rest, before time's up.",
+  "hints": [
+    "Fire doesn't only work on fuses and charges.",
+    "A tethered balloon won't rise until the rope lets it."
+  ],
+  "world": { "width": 1400, "height": 1200, "gravityY": 9.81, "timeLimitSec": 6 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "candle", "partType": "candle", "x": -160, "y": -270 },
+    { "id": "fuse", "partType": "fuse_cord", "x": -110, "y": -270 },
+    { "id": "anchor", "partType": "wall_brick", "x": -60, "y": -270 },
+    { "id": "goal", "partType": "goal_zone", "x": -60, "y": 220 }
+  ],
+  "preplacedParts": [
+    { "id": "balloon", "partType": "balloon_lift", "x": -60, "y": -100, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_rope", "kind": "ROPE", "from": { "partId": "anchor" },
+      "to": { "partId": "balloon" }, "maxLength": 175 }
+  ],
+  "winConditions": [
+    { "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal" }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Burn, then float", "parts": [], "connections": [], "expectedSolveTick": 600 }
+  ]
+}
