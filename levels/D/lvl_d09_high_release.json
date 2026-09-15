@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_d09_high_release",
+  "title": "High Release",
+  "chapter": "D_MASTER",
+  "order": 9,
+  "difficulty": 5,
+  "goalText": "Light the fuse — once the tether burns through, the balloon rises to press the plate and start the belt.",
+  "hints": [
+    "Fire doesn't only work on fuses and charges.",
+    "A tethered balloon won't rise until the rope lets it."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 10 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "candle", "partType": "candle", "x": -160, "y": -270 },
+    { "id": "fuse", "partType": "fuse_cord", "x": -110, "y": -270 },
+    { "id": "anchor", "partType": "wall_brick", "x": -60, "y": -270 },
+    { "id": "switch", "partType": "switch_plate", "x": -60, "y": 220,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 100, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 135, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 180, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 450, "y": -50 },
+    { "id": "final_wall", "partType": "wall_brick", "x": 576, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 544, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "balloon", "partType": "balloon_lift", "x": -60, "y": -100 },
+    { "id": "subject", "partType": "ball_wood", "x": 370, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_rope", "kind": "ROPE", "from": { "partId": "anchor" },
+      "to": { "partId": "balloon" }, "maxLength": 175 },
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Burn, rise, roll", "parts": [], "connections": [], "expectedSolveTick": 717 }
+  ]
+}
