@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_c16_one_careful_run",
+  "title": "One Careful Run",
+  "chapter": "C_TIMING",
+  "order": 16,
+  "difficulty": 5,
+  "goalText": "Light the fuse — once the trigger clears the wall and throws the plate, the belt carries the glass home.",
+  "hints": [
+    "A burning fuse takes real time to reach the far end.",
+    "The plate only needs a touch, and glass survives a gentle ride just fine."
+  ],
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 8 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "candle", "partType": "candle", "x": 0, "y": -100 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 50, "y": -100 },
+    { "id": "barrel_shelf", "partType": "plank_wood", "x": 100, "y": -123 },
+    { "id": "barrel", "partType": "charge_barrel", "x": 100, "y": -90 },
+    { "id": "wall", "partType": "wall_brick", "x": 160, "y": -220 },
+    { "id": "switch", "partType": "switch_plate", "x": 260, "y": -270,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 360, "y": 100,
+      "params": { "rpm": 120, "direction": "CW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 395, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 440, "y": 100 },
+    { "id": "gear3", "partType": "gear_small", "x": 488, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 700, "y": -50 },
+    { "id": "wall2", "partType": "wall_brick", "x": 826, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 794, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "trigger", "partType": "ball_iron", "x": -145, "y": 60 },
+    { "id": "subject", "partType": "ball_glass", "x": 620, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear3" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "SUBJECT_DESTROYED", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Fuse, wall, plate, belt", "parts": [], "connections": [], "expectedSolveTick": 748 }
+  ]
+}
