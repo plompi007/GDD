@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_d15_four_gears_gently",
+  "title": "Four Gears, Gently",
+  "chapter": "D_MASTER",
+  "order": 15,
+  "difficulty": 5,
+  "goalText": "Light the fuse — the blast opens the way, and four meshed gears carry the glass into the zone.",
+  "hints": [
+    "Each meshed gear flips the direction of the one before it.",
+    "Glass survives a gentle ride just fine."
+  ],
+  "world": { "width": 2200, "height": 1200, "gravityY": 9.81, "timeLimitSec": 13 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "candle", "partType": "candle", "x": -10, "y": -100 },
+    { "id": "fuse", "partType": "fuse_cord", "x": 40, "y": -100 },
+    { "id": "barrel_shelf", "partType": "plank_wood", "x": 90, "y": -123 },
+    { "id": "barrel", "partType": "charge_barrel", "x": 90, "y": -90 },
+    { "id": "wall", "partType": "wall_brick", "x": 150, "y": -220 },
+    { "id": "switch", "partType": "switch_plate", "x": 250, "y": -270,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 400, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 435, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 480, "y": 100 },
+    { "id": "gear3", "partType": "gear_small", "x": 528, "y": 100 },
+    { "id": "gear4", "partType": "gear_large", "x": 573, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 850, "y": -50 },
+    { "id": "goal", "partType": "goal_zone", "x": 940, "y": -26 }
+  ],
+  "preplacedParts": [
+    { "id": "trigger", "partType": "ball_iron", "x": -145, "y": 60 },
+    { "id": "subject", "partType": "ball_glass", "x": 770, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear4" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "REACHED_ZONE", "subjectTag": "SUBJECT", "zoneId": "goal" }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "SUBJECT_DESTROYED", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Fire, four gears, glide", "parts": [], "connections": [], "expectedSolveTick": 881 }
+  ]
+}
