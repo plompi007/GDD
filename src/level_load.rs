@@ -262,6 +262,26 @@ pub fn reset_level(
     );
 }
 
+/// Set by anything that replaces `EditorState.level` wholesale while
+/// already in `GameState::Edit` (M9's Load button: reading a save back in
+/// is the same "rebuild everything from `EditorState`" operation reset
+/// already is, just not triggered by an actual state change) and needs
+/// the same despawn+respawn `OnEnter(GameState::Edit)` already does on a
+/// real Edit-to-Edit-via-something-else transition — which
+/// `NextState::set(GameState::Edit)` would *not* trigger while already
+/// in `Edit`, per Bevy's own "only fires on an actual value change"
+/// state semantics.
+#[derive(Resource, Default)]
+pub struct ForceRebuildRequest(pub bool);
+
+fn force_rebuild_requested(request: Res<ForceRebuildRequest>) -> bool {
+    request.0
+}
+
+fn clear_force_rebuild_request(mut request: ResMut<ForceRebuildRequest>) {
+    request.0 = false;
+}
+
 /// Keeps `bevy_rapier2d`'s own pause flag in sync with [`GameState`]
 /// (docs/GDD.md §2.3): frozen in `Edit`/`Paused`/`Failed`, stepping in
 /// `Running` (and `Solved`, which keeps running briefly for the win
@@ -294,7 +314,16 @@ impl Plugin for LevelPlugin {
             .insert_resource(EditorState {
                 level: self.level.clone(),
             })
+            .init_resource::<ForceRebuildRequest>()
             .add_systems(OnEnter(GameState::Edit), reset_level)
-            .add_systems(Update, sync_physics_active);
+            .add_systems(
+                Update,
+                (
+                    (reset_level, clear_force_rebuild_request)
+                        .chain()
+                        .run_if(force_rebuild_requested),
+                    sync_physics_active,
+                ),
+            );
     }
 }
