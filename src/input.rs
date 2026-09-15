@@ -219,13 +219,13 @@ fn start_bin_drag_system(
     else {
         return;
     };
-    let available = editor_state
+    let can_place = editor_state
         .level
         .parts_bin
         .get(slot.bin_index)
-        .map(|entry| entry.count)
-        .unwrap_or(0);
-    if available == 0 {
+        .map(|entry| entry.unlimited || entry.count > 0)
+        .unwrap_or(false);
+    if !can_place {
         return;
     }
     if let (Some(def), Some(world_pos)) = (registry.get(&slot.part_type), pointer.world_pos) {
@@ -477,7 +477,9 @@ fn end_drag_system(
             };
             let snapped = grid_snap(world_pos);
             if let Some(entry) = editor_state.level.parts_bin.get_mut(bin_index) {
-                entry.count = entry.count.saturating_sub(1);
+                if !entry.unlimited {
+                    entry.count = entry.count.saturating_sub(1);
+                }
             }
             *counter += 1;
             let new_part = PlacedPart {

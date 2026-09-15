@@ -78,6 +78,73 @@ pub const ALL_LEVELS: &[&str] = &[
     include_str!("../levels/D/lvl_d16_grand_finale.json"),
 ];
 
+/// M9's free-build mode (docs/GDD.md's Sandbox spec) — deliberately *not*
+/// part of [`ALL_LEVELS`]: it isn't one of the 60 story levels N/P cycles
+/// through, it's a separate entry point (see [`enter_sandbox`]). Empty
+/// canvas, no win/fail conditions, and one `unlimited: true` `partsBin`
+/// entry per registered part type (`parts::tests` guards that list
+/// against drift the same way it already guards `PartRegistry` itself).
+pub const SANDBOX_LEVEL: &str = include_str!("../levels/sandbox.json");
+
+/// Loads [`SANDBOX_LEVEL`] into `EditorState` and enters `GameState::Edit`
+/// — same shape as [`cycle_level`], just a fixed destination instead of
+/// stepping through an index, since Sandbox is one level, not sixty.
+pub fn enter_sandbox(editor_state: &mut EditorState, next_state: &mut NextState<GameState>) {
+    let level: LevelFile = serde_json::from_str(SANDBOX_LEVEL)
+        .unwrap_or_else(|e| panic!("invalid SANDBOX_LEVEL JSON: {e}"));
+    println!("level -> {} ({})", level.id, level.title);
+    editor_state.level = level;
+    next_state.set(GameState::Edit);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use super::*;
+    use crate::parts::build_registry;
+
+    /// Guards `levels/sandbox.json`'s `partsBin` against drift the same
+    /// way `parts::tests` already guards `PartRegistry` itself against
+    /// `PART_JSON` — every registered part type must have exactly one
+    /// `unlimited: true` entry, and there must be no leftover entries
+    /// for a part type that no longer exists.
+    #[test]
+    fn sandbox_parts_bin_has_exactly_one_unlimited_entry_per_registered_part_type() {
+        let registry = build_registry();
+        let level: LevelFile =
+            serde_json::from_str(SANDBOX_LEVEL).expect("SANDBOX_LEVEL must parse");
+
+        let registered: BTreeSet<&str> = registry.part_types().collect();
+        let in_bin: BTreeSet<&str> = level
+            .parts_bin
+            .iter()
+            .map(|entry| entry.part_type.as_str())
+            .collect();
+        assert_eq!(
+            registered, in_bin,
+            "sandbox.json's partsBin must list exactly the registered part types, no more, no less"
+        );
+        assert_eq!(
+            level.parts_bin.len(),
+            in_bin.len(),
+            "no part type should appear twice in sandbox.json's partsBin"
+        );
+        assert!(
+            level.parts_bin.iter().all(|entry| entry.unlimited),
+            "every sandbox.json partsBin entry must be unlimited"
+        );
+    }
+
+    #[test]
+    fn sandbox_level_has_no_win_or_fail_conditions() {
+        let level: LevelFile =
+            serde_json::from_str(SANDBOX_LEVEL).expect("SANDBOX_LEVEL must parse");
+        assert!(level.win_conditions.is_empty());
+        assert!(level.fail_conditions.is_empty());
+    }
+}
+
 /// Index into [`ALL_LEVELS`] of the level currently loaded into
 /// [`EditorState`] — advanced by [`cycle_level`].
 #[derive(Resource, Default)]

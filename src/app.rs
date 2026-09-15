@@ -9,7 +9,7 @@ use bevy::prelude::*;
 
 use crate::game_state::GameState;
 use crate::input::{EditorInputPlugin, PointerAdapterPlugin};
-use crate::level_catalog::{cycle_level, LevelIndex, ALL_LEVELS};
+use crate::level_catalog::{cycle_level, enter_sandbox, LevelIndex, ALL_LEVELS};
 use crate::level_file_format::LevelFile;
 use crate::level_load::{EditorState, LevelPlugin};
 use crate::parts::PartsPlugin;
@@ -43,14 +43,17 @@ pub fn main() {
         .insert_resource(ClearColor(Color::srgb_u8(0x14, 0x17, 0x1f)))
         .init_resource::<LevelIndex>()
         .add_systems(Startup, spawn_camera)
-        .add_systems(Update, (dev_controls, cycle_level_keyboard, log_state_and_fps))
+        .add_systems(
+            Update,
+            (dev_controls, cycle_level_keyboard, enter_sandbox_keyboard, log_state_and_fps),
+        )
         .run();
 }
 
 fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera2d);
     println!(
-        "ChainWorks desktop controls: Space = play/pause, R = reset, N/P = next/previous level ({} loaded)",
+        "ChainWorks desktop controls: Space = play/pause, R = reset, N/P = next/previous level ({} loaded), B = Sandbox",
         ALL_LEVELS.len()
     );
 }
@@ -97,6 +100,19 @@ fn cycle_level_keyboard(
         return;
     };
     cycle_level(delta, &mut index, &mut editor_state, &mut next_state);
+}
+
+/// B enters M9's Sandbox (docs/GDD.md's Sandbox spec) — a separate entry
+/// point from the N/P story-level cycle above, not one more stop on it
+/// (see [`enter_sandbox`]'s own docs on why).
+fn enter_sandbox_keyboard(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut editor_state: ResMut<EditorState>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if keys.just_pressed(KeyCode::KeyB) {
+        enter_sandbox(&mut editor_state, &mut next_state);
+    }
 }
 
 fn log_state_and_fps(

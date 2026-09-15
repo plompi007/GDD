@@ -194,6 +194,13 @@ pub struct PartsBinEntry {
     pub count: u32,
     #[serde(default)]
     pub locked_params: Vec<String>,
+    /// M9/Sandbox: when `true`, `count` is never checked or decremented —
+    /// `input.rs`'s bin-drag systems place from this entry regardless of
+    /// how many times it's been used. `false` (the default, so every
+    /// existing story level's `partsBin` entries are unaffected) keeps
+    /// the ordinary "consumed on placement" behavior.
+    #[serde(default)]
+    pub unlimited: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
