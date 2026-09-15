@@ -170,3 +170,23 @@ fn lvl_d05_fan_the_flame_is_deterministic() {
     assert_eq!(first, second, "run 1 and run 2 diverged");
     assert_eq!(second, third, "run 2 and run 3 diverged");
 }
+
+#[test]
+fn lvl_d06_bounce_and_blow_is_solvable() {
+    let json = include_str!("../levels/D/lvl_d06_bounce_and_blow.json");
+    let mut app = build_app(json);
+    assert!(
+        run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
+        "lvl_d06_bounce_and_blow did not reach Solved within {MAX_TICKS_TO_SOLVE} ticks"
+    );
+}
+
+#[test]
+fn lvl_d06_bounce_and_blow_is_deterministic() {
+    let json = include_str!("../levels/D/lvl_d06_bounce_and_blow.json");
+    let first = subject_final_position(json, 870);
+    let second = subject_final_position(json, 870);
+    let third = subject_final_position(json, 870);
+    assert_eq!(first, second, "run 1 and run 2 diverged");
+    assert_eq!(second, third, "run 2 and run 3 diverged");
+}
