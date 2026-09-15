@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_d12_clear_and_carry",
+  "title": "Clear and Carry",
+  "chapter": "D_MASTER",
+  "order": 12,
+  "difficulty": 5,
+  "goalText": "The blocker rises onto the spike before the trigger arrives — the plate starts the belt for the glass.",
+  "hints": [
+    "A blocker rises onto the spike well before the trigger gets there.",
+    "Glass survives a gentle ride just fine."
+  ],
+  "world": { "width": 2000, "height": 1200, "gravityY": 9.81, "timeLimitSec": 12 },
+  "fixedParts": [
+    { "id": "ground", "partType": "floor_ground", "x": 0, "y": -300 },
+    { "id": "ramp", "partType": "plank_wood", "x": -100, "y": -120, "rotation": -20 },
+    { "id": "spike", "partType": "spike_pin", "x": 300, "y": -230 },
+    { "id": "switch", "partType": "switch_plate", "x": 370, "y": -270,
+      "params": { "mode": "toggle" } },
+    { "id": "motor", "partType": "motor_electric", "x": 400, "y": 100,
+      "params": { "rpm": 120, "direction": "CCW" } },
+    { "id": "gear1", "partType": "gear_small", "x": 435, "y": 100 },
+    { "id": "gear2", "partType": "gear_large", "x": 480, "y": 100 },
+    { "id": "conveyor", "partType": "conveyor", "x": 750, "y": -50 },
+    { "id": "final_wall", "partType": "wall_brick", "x": 876, "y": -50 },
+    { "id": "bin", "partType": "bin_target", "x": 844, "y": -30 }
+  ],
+  "preplacedParts": [
+    { "id": "blocker", "partType": "balloon_lift", "x": 300, "y": -260 },
+    { "id": "trigger", "partType": "ball_wood", "x": -145, "y": 60 },
+    { "id": "subject", "partType": "ball_glass", "x": 670, "y": -26, "tags": ["SUBJECT"] }
+  ],
+  "partsBin": [],
+  "connections": [
+    { "id": "c_power", "kind": "WIRE", "from": { "partId": "switch", "anchorIdx": 0 },
+      "to": { "partId": "motor", "anchorIdx": 0 } },
+    { "id": "c_belt", "kind": "BELT", "from": { "partId": "gear2" }, "to": { "partId": "conveyor" } }
+  ],
+  "winConditions": [
+    { "type": "CONTAINED", "subjectTag": "SUBJECT", "containerId": "bin", "holdMs": 500 }
+  ],
+  "failConditions": [
+    { "type": "LEFT_BOUNDS", "subjectTag": "SUBJECT" },
+    { "type": "SUBJECT_DESTROYED", "subjectTag": "SUBJECT" },
+    { "type": "TIMEOUT" }
+  ],
+  "solutions": [
+    { "label": "Pop, press, ride", "parts": [], "connections": [], "expectedSolveTick": 839 }
+  ]
+}
