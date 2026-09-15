@@ -59,3 +59,32 @@ jobs:
 
       - name: Run test suite (headless — no GPU/display needed)
         run: cargo test --release --target ${{ matrix.target }}
+
+      # `bevy_asset` resolves relative paths against `CARGO_MANIFEST_DIR`
+      # when that env var is set (true for every `cargo run`/`cargo test`
+      # invocation above, since Cargo itself sets it for the process it
+      # spawns) and falls back to the *executable's own directory*
+      # otherwise — which is exactly the case for a real downloaded
+      # release, where nothing set that variable. Verified locally by
+      # running the built binary directly under Xvfb: without `assets/`
+      # copied next to it, every UI label (title/goal text, this row's
+      # own buttons) rendered blank; with it copied alongside, real text.
+      # So the shipped artifact needs `assets/` next to the binary, not
+      # just present somewhere in the repo checkout.
+      - name: Stage a real "download and run" release folder
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp "target/${{ matrix.target }}/release/chainworks.exe" dist/
+          else
+            cp "target/${{ matrix.target }}/release/chainworks" dist/
+          fi
+          cp -r assets dist/assets
+
+      - name: Upload desktop build
+        uses: actions/upload-artifact@v4
+        with:
+          name: chainworks-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
