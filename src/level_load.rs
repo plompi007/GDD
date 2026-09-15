@@ -89,7 +89,7 @@ pub(crate) fn spawn_placed_part(
 /// than panicking — a level author leaving `anchorIdx` at its schema
 /// default (0) on a part with no declared anchors is a content mistake to
 /// catch in level-authoring tooling (M8), not a reason to crash the sim.
-fn anchor_offset(def: &PartDef, anchor_idx: u32) -> Offset {
+pub(crate) fn anchor_offset(def: &PartDef, anchor_idx: u32) -> Offset {
     def.anchors
         .iter()
         .find(|a| a.idx == anchor_idx)

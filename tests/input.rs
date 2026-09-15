@@ -13,10 +13,13 @@ use bevy::time::TimeUpdateStrategy;
 use bevy::transform::TransformPlugin;
 
 use chainworks::game_state::GameState;
-use chainworks::input::{EditorActionRequest, EditorInputPlugin, PointerState, SelectedPart};
-use chainworks::level_file_format::LevelFile;
+use chainworks::input::{
+    ConnectToolRequest, EditorActionRequest, EditorInputPlugin, PointerState, SelectedPart,
+};
+use chainworks::level_file_format::{ConnectionKind, LevelFile};
 use chainworks::level_load::LevelPlugin;
 use chainworks::parts::PartsPlugin;
+use chainworks::rope_network::RopeConnection;
 use chainworks::sim::{SimPlugin, FIXED_DT};
 use chainworks::ui::parts_bin::BinSlot;
 use chainworks::win_conditions::WinConditionsPlugin;
@@ -46,7 +49,11 @@ fn spawn_bin_slot_for_test(app: &mut App, part_type: &str, bin_index: usize) -> 
 }
 
 fn build_app() -> App {
-    let level: LevelFile = serde_json::from_str(LEVEL_JSON).expect("demo level JSON must be valid");
+    build_app_with(LEVEL_JSON)
+}
+
+fn build_app_with(level_json: &str) -> App {
+    let level: LevelFile = serde_json::from_str(level_json).expect("demo level JSON must be valid");
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -196,6 +203,138 @@ fn deleting_the_selected_plank_removes_it_and_the_level_can_no_longer_solve() {
     assert!(
         !run_until_solved(&mut app, MAX_TICKS_TO_SOLVE),
         "level solved itself after the only plank was deleted — nothing should catch the ball"
+    );
+}
+
+/// A single tap (press-and-release with no movement) at a world position
+/// — enough to drive [`chainworks::input::connect_tool_system`], which
+/// only reacts to `just_pressed`. Unlike [`tap_to_select`] this doesn't
+/// go through `start_existing_part_drag_system` at all (connect mode
+/// disables that system while active), so it works on fixed parts too.
+fn tap(app: &mut App, world_pos: Vec2) {
+    let mut pointer = app.world_mut().resource_mut::<PointerState>();
+    pointer.world_pos = Some(world_pos);
+    pointer.just_pressed = true;
+    pointer.pressed = true;
+    pointer.just_released = false;
+    drop(pointer);
+    app.update();
+    let mut pointer = app.world_mut().resource_mut::<PointerState>();
+    pointer.just_pressed = false;
+    pointer.pressed = false;
+    pointer.just_released = true;
+    drop(pointer);
+    app.update();
+}
+
+const CONNECT_FIXTURE_JSON: &str = include_str!("../levels/A/lvl_m9_connect_tool.json");
+
+#[test]
+fn connecting_a_falling_ball_to_a_fixed_anchor_with_a_rope_catches_its_fall() {
+    let mut app = build_app_with(CONNECT_FIXTURE_JSON);
+
+    let (anchor_entity, ball_entity) = {
+        let mut query = app
+            .world_mut()
+            .query::<(Entity, &chainworks::level_load::PlacedId)>();
+        let mut anchor = None;
+        let mut ball = None;
+        for (entity, id) in query.iter(app.world()) {
+            match id.0.as_str() {
+                "anchor" => anchor = Some(entity),
+                "ball" => ball = Some(entity),
+                _ => {}
+            }
+        }
+        (anchor.expect("anchor must exist"), ball.expect("ball must exist"))
+    };
+
+    app.world_mut()
+        .resource_mut::<ConnectToolRequest>()
+        .kind = Some(ConnectionKind::Rope);
+    tap(&mut app, Vec2::new(0.0, 300.0)); // anchor's position
+    tap(&mut app, Vec2::new(0.0, 100.0)); // ball's position
+
+    assert_eq!(
+        app.world_mut()
+            .query::<&RopeConnection>()
+            .iter(app.world())
+            .count(),
+        1,
+        "connecting rope-mode should have spawned exactly one RopeConnection"
+    );
+    let editor_state = app
+        .world()
+        .resource::<chainworks::level_load::EditorState>();
+    assert_eq!(editor_state.level.connections.len(), 1);
+    assert_eq!(editor_state.level.connections[0].kind, ConnectionKind::Rope);
+    assert!(
+        app.world()
+            .resource::<ConnectToolRequest>()
+            .kind
+            .is_some(),
+        "connect mode should stay active for further connections until explicitly turned off"
+    );
+
+    // The ball starts 200 units below the anchor; a rope with maxLength =
+    // 200 * 1.05 = 210 should let it fall only a little further (~10
+    // units) before tension catches it, nowhere near unconstrained
+    // free-fall over the same time (hundreds of units, per every other
+    // free-fall level in this project).
+    for _ in 0..300 {
+        app.update();
+    }
+    let anchor_y = app.world().get::<Transform>(anchor_entity).unwrap().translation.y;
+    let ball_y = app.world().get::<Transform>(ball_entity).unwrap().translation.y;
+    let fallen = anchor_y - ball_y - 200.0;
+    assert!(
+        (0.0..60.0).contains(&fallen),
+        "ball should be caught by the rope's tension near its 210-unit max length, \
+         but it fell {fallen:.1} units past its 200-unit starting offset (anchor_y={anchor_y}, ball_y={ball_y})"
+    );
+}
+
+#[test]
+fn connecting_a_switch_to_a_motor_with_a_wire_starts_it_spinning() {
+    let mut app = build_app_with(CONNECT_FIXTURE_JSON);
+
+    let motor_entity = {
+        let mut query = app
+            .world_mut()
+            .query::<(Entity, &chainworks::level_load::PlacedId)>();
+        query
+            .iter(app.world())
+            .find(|(_, id)| id.0 == "motor")
+            .map(|(entity, _)| entity)
+            .expect("motor must exist")
+    };
+
+    app.world_mut()
+        .resource_mut::<ConnectToolRequest>()
+        .kind = Some(ConnectionKind::Wire);
+    tap(&mut app, Vec2::new(400.0, 300.0)); // switch's position
+    tap(&mut app, Vec2::new(400.0, 100.0)); // motor's position
+
+    let editor_state = app
+        .world()
+        .resource::<chainworks::level_load::EditorState>();
+    assert_eq!(editor_state.level.connections.len(), 1);
+    assert_eq!(editor_state.level.connections[0].kind, ConnectionKind::Wire);
+
+    app.world_mut()
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Running);
+    for _ in 0..20 {
+        app.update();
+    }
+
+    let rotary = app
+        .world()
+        .get::<chainworks::gear_train::RotaryState>(motor_entity)
+        .expect("motor must have a RotaryState");
+    assert_ne!(
+        rotary.angular_velocity, 0.0,
+        "motor should be spinning once wired to the switch a ball is already resting on"
     );
 }
 

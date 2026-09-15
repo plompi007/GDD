@@ -15,17 +15,24 @@
 //! `flip_y` stay unimplemented here on purpose: no shipped part has an
 //! asymmetric collider, so flipping one currently has zero physical or
 //! visual effect to test against — wiring a no-op action would be dead
-//! code. The rope/belt/wire connect tool (§3.5) and camera pan/zoom
-//! (§3.6) remain separate, not touched by this module.
+//! code. The rope/belt/wire connect tool (§3.5) is [`ConnectToolRequest`]/
+//! [`connect_tool_system`] below, same testable-resource pattern again —
+//! it builds the exact same `RopeConnection`/`BeltConnection`/
+//! `EnergyGraph` edge `level_load.rs`'s `spawn_connections` would from a
+//! level file, just live, from two taps instead of from JSON at load
+//! time. Camera pan/zoom (§3.6) remains separate, not touched here.
 
 use bevy::input::touch::Touches;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
+use crate::energy_graph::EnergyGraph;
 use crate::game_state::GameState;
-use crate::level_file_format::PlacedPart;
-use crate::level_load::{spawn_placed_part, EditorState, LevelEntity, PlacedId};
+use crate::gear_train::BeltConnection;
+use crate::level_file_format::{AnchorRef, Connection, ConnectionKind, PlacedPart};
+use crate::level_load::{anchor_offset, spawn_placed_part, EditorState, LevelEntity, PlacedId};
 use crate::parts::PartRegistry;
+use crate::rope_network::{world_anchor, RopeConnection};
 use crate::ui::parts_bin::BinSlot;
 
 /// docs/GDD.md §3.3 priority 4 ("Grid snap, always") — the one snap tier
@@ -121,6 +128,17 @@ pub struct EditorActionRequest {
     pub rotate_selected: bool,
 }
 
+/// Drives the rope/belt/wire connect tool (docs/GDD.md §3.5, M6 debt): set
+/// `kind` to start (e.g. from a future "connect: rope/belt/wire" button —
+/// bevy_ui chrome for later, same as everything else in this file), then
+/// tap two already-placed parts. `pending_first` is `connect_tool_system`'s
+/// own bookkeeping between the two taps, not something a caller sets.
+#[derive(Resource, Default)]
+pub struct ConnectToolRequest {
+    pub kind: Option<ConnectionKind>,
+    pending_first: Option<Entity>,
+}
+
 fn hit_test_placed_part(
     pointer_pos: Vec2,
     state: &EditorState,
@@ -139,6 +157,44 @@ fn hit_test_placed_part(
         .map(|(entity, _, _)| entity)
 }
 
+/// Like [`hit_test_placed_part`], but includes `fixedParts` too — the
+/// connect tool wires ports/anchors, which fixed furniture (a level's own
+/// `motor_electric`, say) has exactly as much as a movable part does,
+/// unlike drag/delete/rotate which only make sense for something the
+/// player actually placed.
+fn hit_test_any_part(
+    pointer_pos: Vec2,
+    placed: &Query<(Entity, &PlacedId, &Transform), (With<LevelEntity>, Without<PlacedGhost>)>,
+) -> Option<Entity> {
+    placed
+        .iter()
+        .find(|(_, _, transform)| {
+            transform.translation.truncate().distance(pointer_pos) < PICK_RADIUS
+        })
+        .map(|(entity, _, _)| entity)
+}
+
+/// `id` + `partType` for an already-placed entity, looked up through
+/// `EditorState` (the single source of truth) rather than any live
+/// per-entity part-type component, since none exists — see this module's
+/// own doc comment on why `EditorState.level.preplaced_parts` already has
+/// to be kept in sync for every other editor action.
+fn placed_id_and_type(
+    entity: Entity,
+    state: &EditorState,
+    placed: &Query<(Entity, &PlacedId, &Transform), (With<LevelEntity>, Without<PlacedGhost>)>,
+) -> Option<(String, String)> {
+    let (_, id, _) = placed.iter().find(|(e, _, _)| *e == entity)?;
+    let part_type = state
+        .level
+        .fixed_parts
+        .iter()
+        .chain(state.level.preplaced_parts.iter())
+        .find(|p| p.id == id.0)
+        .map(|p| p.part_type.clone())?;
+    Some((id.0.clone(), part_type))
+}
+
 /// A press on a real `ui::parts_bin::BinSlot` button starts a from-bin
 /// drag — read from bevy_ui's own `Interaction` (driven by its picking
 /// backend against the real cursor/touch), not `PointerState`: once the
@@ -148,12 +204,13 @@ fn hit_test_placed_part(
 fn start_bin_drag_system(
     mut drag: ResMut<DragState>,
     pointer: Res<PointerState>,
+    connect: Res<ConnectToolRequest>,
     editor_state: Res<EditorState>,
     registry: Res<PartRegistry>,
     mut commands: Commands,
     bin_slots: Query<(&BinSlot, &Interaction), Changed<Interaction>>,
 ) {
-    if drag.0.is_some() {
+    if drag.0.is_some() || connect.kind.is_some() {
         return;
     }
     let Some((slot, _)) = bin_slots
@@ -191,10 +248,11 @@ fn start_existing_part_drag_system(
     pointer: Res<PointerState>,
     mut drag: ResMut<DragState>,
     mut selected: ResMut<SelectedPart>,
+    connect: Res<ConnectToolRequest>,
     editor_state: Res<EditorState>,
     placed: Query<(Entity, &PlacedId, &Transform), (With<LevelEntity>, Without<PlacedGhost>)>,
 ) {
-    if !pointer.just_pressed || drag.0.is_some() {
+    if !pointer.just_pressed || drag.0.is_some() || connect.kind.is_some() {
         return;
     }
     let Some(world_pos) = pointer.world_pos else {
@@ -265,6 +323,101 @@ fn apply_editor_actions_system(
         }
         part.rotation = (part.rotation + def.editor.rotation_snap) % 360.0;
         transform.rotation = Quat::from_rotation_z(part.rotation.to_radians());
+    }
+}
+
+/// The first half of a rope/belt/wire connection — anchor 0 on both ends
+/// (docs/GDD.md §5.1's `anchorRef.anchorIdx` default), matching the
+/// simplest case `level_load.rs`'s own JSON-driven `spawn_connections`
+/// already handles the same way. Picking a specific anchor on a
+/// multi-anchor part is future UI polish, not needed for a first
+/// functioning connect tool.
+#[allow(clippy::too_many_arguments)]
+fn connect_tool_system(
+    pointer: Res<PointerState>,
+    mut connect: ResMut<ConnectToolRequest>,
+    mut editor_state: ResMut<EditorState>,
+    registry: Res<PartRegistry>,
+    mut energy: ResMut<EnergyGraph>,
+    mut commands: Commands,
+    mut counter: Local<u64>,
+    placed: Query<(Entity, &PlacedId, &Transform), (With<LevelEntity>, Without<PlacedGhost>)>,
+    transforms: Query<&Transform>,
+) {
+    let Some(kind) = connect.kind else {
+        return;
+    };
+    if !pointer.just_pressed {
+        return;
+    }
+    let Some(world_pos) = pointer.world_pos else {
+        return;
+    };
+    let Some(entity) = hit_test_any_part(world_pos, &placed) else {
+        return;
+    };
+
+    let Some(first) = connect.pending_first else {
+        connect.pending_first = Some(entity);
+        return;
+    };
+    if first == entity {
+        return; // tapped the same part twice — not a connection to itself
+    }
+    connect.pending_first = None;
+
+    let Some((id_a, type_a)) = placed_id_and_type(first, &editor_state, &placed) else {
+        return;
+    };
+    let Some((id_b, type_b)) = placed_id_and_type(entity, &editor_state, &placed) else {
+        return;
+    };
+    let (Some(def_a), Some(def_b)) = (registry.get(&type_a), registry.get(&type_b)) else {
+        return;
+    };
+
+    *counter += 1;
+    let connection = Connection {
+        id: format!("connect_{}", *counter),
+        kind,
+        from: AnchorRef { part_id: id_a.clone(), anchor_idx: 0 },
+        to: AnchorRef { part_id: id_b.clone(), anchor_idx: 0 },
+        max_length: None,
+        routed_through: Vec::new(),
+    };
+
+    match kind {
+        ConnectionKind::Rope => {
+            let end_a = (first, anchor_offset(def_a, 0));
+            let end_b = (entity, anchor_offset(def_b, 0));
+            let max_length = match (world_anchor(&transforms, end_a), world_anchor(&transforms, end_b)) {
+                (Some(a), Some(b)) => a.distance(b) * 1.05,
+                _ => return,
+            };
+            commands.spawn((
+                RopeConnection {
+                    end_a,
+                    end_b,
+                    pulleys: Vec::new(),
+                    max_length,
+                },
+                LevelEntity,
+            ));
+            editor_state.level.connections.push(Connection {
+                max_length: Some(max_length),
+                ..connection
+            });
+        }
+        ConnectionKind::Belt => {
+            commands.spawn((BeltConnection { from: first, to: entity }, LevelEntity));
+            editor_state.level.connections.push(connection);
+        }
+        ConnectionKind::Wire => {
+            let from_port = def_a.ports.first().map(|p| p.id.as_str()).unwrap_or("out");
+            let to_port = def_b.ports.first().map(|p| p.id.as_str()).unwrap_or("in");
+            energy.connect(&id_a, from_port, &id_b, to_port);
+            editor_state.level.connections.push(connection);
+        }
     }
 }
 
@@ -394,6 +547,7 @@ impl Plugin for EditorInputPlugin {
             .init_resource::<DragState>()
             .init_resource::<SelectedPart>()
             .init_resource::<EditorActionRequest>()
+            .init_resource::<ConnectToolRequest>()
             .add_systems(
                 Update,
                 (
@@ -402,6 +556,7 @@ impl Plugin for EditorInputPlugin {
                     update_drag_system,
                     end_drag_system,
                     apply_editor_actions_system,
+                    connect_tool_system,
                 )
                     .chain()
                     .run_if(in_state(GameState::Edit)),

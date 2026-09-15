@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "lvl_m9_connect_tool",
+  "title": "Connect Tool Fixture",
+  "goalText": "Test-only fixture for the M9 connect tool (tests/input.rs) -- not a real level, never added to level_catalog.rs's ALL_LEVELS. Mirrors lvl_m5_drag_bridge.json's role for M5.",
+  "world": { "width": 1600, "height": 1200, "gravityY": 9.81, "timeLimitSec": 30 },
+  "fixedParts": [
+    { "id": "anchor", "partType": "wall_brick", "x": 0, "y": 300 },
+    { "id": "switch", "partType": "switch_plate", "x": 400, "y": 300,
+      "params": { "mode": "toggle" } }
+  ],
+  "preplacedParts": [
+    { "id": "ball", "partType": "ball_iron", "x": 0, "y": 100 },
+    { "id": "trigger", "partType": "ball_wood", "x": 400, "y": 308 },
+    { "id": "motor", "partType": "motor_electric", "x": 400, "y": 100,
+      "params": { "rpm": 120, "direction": "CW" } }
+  ],
+  "partsBin": [],
+  "connections": [],
+  "winConditions": [],
+  "failConditions": [],
+  "solutions": []
+}
