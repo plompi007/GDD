@@ -13,6 +13,7 @@ use crate::level_catalog::{cycle_level, enter_sandbox, LevelIndex, ALL_LEVELS};
 use crate::level_file_format::LevelFile;
 use crate::level_load::{EditorState, LevelPlugin};
 use crate::parts::PartsPlugin;
+use crate::render::PartArtPlugin;
 use crate::sim::SimPlugin;
 use crate::ui::UiShellPlugin;
 use crate::win_conditions::WinConditionsPlugin;
@@ -36,6 +37,7 @@ pub fn main() {
         .add_plugins(PartsPlugin)
         .add_plugins(SimPlugin)
         .add_plugins(LevelPlugin { level })
+        .add_plugins(PartArtPlugin)
         .add_plugins(PointerAdapterPlugin)
         .add_plugins(EditorInputPlugin)
         .add_plugins(UiShellPlugin)

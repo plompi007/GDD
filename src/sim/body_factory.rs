@@ -8,6 +8,13 @@ use bevy_rapier2d::prelude::*;
 use crate::atmosphere::WindReceiver;
 use crate::part::{BodyKind, PartCategory, PartDef, ShapeSpec};
 
+/// The `PartDef.part_type` a spawned entity came from — lets a system find
+/// "every gear_small" etc. without re-deriving it from `EditorState`/
+/// `PlacedId`. Currently only consumed by `render::PartArtPlugin` (swapping
+/// in real art post-spawn), but harmless/inert for every other system.
+#[derive(Component, Debug, Clone)]
+pub struct PartType(pub String);
+
 /// Temporary flat-color scheme so parts are visually distinguishable before
 /// real art exists. Replaced by the Prism Foundry sprite/shader system in
 /// M6.5 (docs/GDD.md §3.9) — this function should not survive past that.
@@ -68,6 +75,7 @@ pub fn spawn_part(
         Friction::new(def.body.friction),
         Restitution::new(def.body.restitution),
         transform,
+        PartType(def.part_type.clone()),
         // Every collider gets contact events, not just sensors: tag-rule
         // reactions (docs/GDD.md §1.4.2 — SHARP popping POPPABLE, etc.) and
         // IMPACT-triggered parts (switch_plate, punch_arm, cutter_shears)

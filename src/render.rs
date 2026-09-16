@@ -21,7 +21,53 @@ use std::f32::consts::TAU;
 
 use bevy::prelude::*;
 
-use crate::part::PartDef;
+use crate::part::{PartDef, ShapeSpec};
+use crate::parts::PartRegistry;
+use crate::sim::body_factory::PartType;
+
+/// Real art asset path (under `assets/`) for a part's *base* sprite, if one
+/// has been generated yet — see docs/GDD.md's graphics status note for how
+/// these were produced (DALL·E, background-stripped via ImageMagick
+/// floodfill, downscaled to 256px max). For a part with idle/action
+/// variants (`switch_plate`, `springboard`, `cutter_shears`, `punch_arm`)
+/// this is the *idle* frame only — the action-frame swap and the
+/// `fuse_cord`/`charge_barrel` animation loops are not wired up yet, this
+/// just gets the correct art on screen at rest. `gear_large` and `candle`
+/// have no usable art yet (the gear_large generation came back wrong, and
+/// candle was only ever a single non-transparent test image) so both still
+/// fall through to the procedural placeholder below.
+pub fn static_texture_for(part_type: &str) -> Option<&'static str> {
+    match part_type {
+        "ball_wood" => Some("parts/ball_wood.png"),
+        "ball_rubber" => Some("parts/ball_rubber.png"),
+        "ball_iron" => Some("parts/ball_iron.png"),
+        "ball_lead" => Some("parts/ball_lead.png"),
+        "ball_glass" => Some("parts/ball_glass.png"),
+        "balloon_lift" => Some("parts/balloon_lift.png"),
+        "beam_steel" => Some("parts/beam_steel.png"),
+        "bin_target" => Some("parts/bin_target.png"),
+        "charge_barrel" => Some("parts/charge_barrel.png"),
+        "conveyor" => Some("parts/conveyor.png"),
+        "crate_wood" => Some("parts/crate_wood.png"),
+        "cutter_shears" => Some("parts/cutter_shears_idle.png"),
+        "fan_blower" => Some("parts/fan_blower.png"),
+        "floor_ground" => Some("parts/floor_ground.png"),
+        "fuse_cord" => Some("parts/fuse_cord_0.png"),
+        "gear_small" => Some("parts/gear_small.png"),
+        "goal_zone" => Some("parts/goal_zone.png"),
+        "lever_seesaw" => Some("parts/lever_seesaw.png"),
+        "motor_electric" => Some("parts/motor_electric.png"),
+        "outlet_power" => Some("parts/outlet_power.png"),
+        "plank_wood" => Some("parts/plank_wood.png"),
+        "pulley_wheel" => Some("parts/pulley_wheel.png"),
+        "punch_arm" => Some("parts/punch_arm_idle.png"),
+        "spike_pin" => Some("parts/spike_pin.png"),
+        "springboard" => Some("parts/springboard_idle.png"),
+        "switch_plate" => Some("parts/switch_plate_idle.png"),
+        "wall_brick" => Some("parts/wall_brick.png"),
+        _ => None,
+    }
+}
 
 const SHADE: Color = Color::srgba(0.0, 0.0, 0.0, 0.35);
 const HIGHLIGHT: Color = Color::srgba(1.0, 1.0, 1.0, 0.55);
@@ -209,6 +255,12 @@ pub fn decorate(
     parent: Entity,
     def: &PartDef,
 ) {
+    // Real art already carries this detail (gear teeth, a candle's flame,
+    // ...) — layering the procedural version underneath/behind it too
+    // would just double up, so skip it entirely once art exists.
+    if static_texture_for(&def.part_type).is_some() {
+        return;
+    }
     let decorations = decorations_for(def);
     if decorations.is_empty() {
         return;
@@ -223,4 +275,83 @@ pub fn decorate(
             ));
         }
     });
+}
+
+/// Swaps in the real texture from [`static_texture_for`] on every
+/// newly-spawned part, replacing whatever procedural placeholder
+/// `body_factory::spawn_part`/[`decorate`] gave it (a `Mesh2d` circle for a
+/// `Ball` shape, or a flat-color `Sprite` for a `Box` shape — both get
+/// overwritten by a real textured `Sprite` sized to the same collider
+/// bounding box).
+///
+/// Deliberately **not** added to [`crate::parts::PartsPlugin`] or any other
+/// plugin the headless test suite uses: it needs a real `AssetServer` (and,
+/// via `asset_server.load`, the full `ImagePlugin`/`RenderAssetPlugin`
+/// pipeline `DefaultPlugins` sets up) which `MinimalPlugins`-based tests
+/// deliberately don't have, precisely so those tests stay renderer-free.
+/// Only `app.rs`'s real `App::new()` registers this plugin.
+fn apply_real_art_system(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    registry: Res<PartRegistry>,
+    spawned: Query<(Entity, &PartType), Added<PartType>>,
+) {
+    for (entity, part_type) in &spawned {
+        let Some(path) = static_texture_for(&part_type.0) else {
+            continue;
+        };
+        let Some(def) = registry.get(&part_type.0) else {
+            continue;
+        };
+        let size = match def.body.shape {
+            ShapeSpec::Ball { radius } => Vec2::splat(radius * 2.0),
+            ShapeSpec::Box { w, h } => Vec2::new(w, h),
+        };
+        commands
+            .entity(entity)
+            .remove::<Mesh2d>()
+            .remove::<MeshMaterial2d<ColorMaterial>>()
+            .insert(Sprite {
+                image: asset_server.load(path),
+                custom_size: Some(size),
+                ..default()
+            });
+    }
+}
+
+/// See [`apply_real_art_system`]'s own docs for why this is never added to
+/// a headless test app — only `app.rs`'s real `App::new()` uses it.
+pub struct PartArtPlugin;
+
+impl Plugin for PartArtPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, apply_real_art_system);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Drift guard: every path `static_texture_for` returns must actually
+    /// exist under `assets/`, and for every *registered* part type (not
+    /// just the ones in this list) — a typo'd path would otherwise fail
+    /// silently at runtime (`asset_server.load` just logs a warning and
+    /// renders nothing, per M9's font-loading bug).
+    #[test]
+    fn every_static_texture_path_exists_on_disk() {
+        let registry = crate::parts::build_registry();
+        for part_type in registry.part_types() {
+            let Some(path) = static_texture_for(part_type) else {
+                continue;
+            };
+            let full = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("assets")
+                .join(path);
+            assert!(
+                full.exists(),
+                "static_texture_for({part_type:?}) points at {full:?}, which doesn't exist"
+            );
+        }
+    }
 }
