@@ -26,6 +26,7 @@ pub mod lever_seesaw;
 pub mod motor_electric;
 pub mod outlet_power;
 pub mod punch_arm;
+pub mod springboard;
 pub mod switch_plate;
 
 /// One `include_str!` per file, matching docs/GDD.md §1.3's initial P0
@@ -129,6 +130,7 @@ impl Plugin for PartsPlugin {
                 switch_plate::SwitchPlatePlugin,
                 cutter_shears::CutterShearsPlugin,
                 punch_arm::PunchArmPlugin,
+                springboard::SpringboardPlugin,
             ));
     }
 }
@@ -161,6 +163,7 @@ pub fn attach_part_behavior(commands: &mut Commands, entity: Entity, def: &PartD
         "charge_barrel" => charge_barrel::attach(commands, entity, def, placed),
         "cutter_shears" => cutter_shears::attach(commands, entity, def, placed),
         "punch_arm" => punch_arm::attach(commands, entity, def, placed),
+        "springboard" => springboard::attach(commands, entity),
         _ => {}
     }
 }

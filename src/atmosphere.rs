@@ -70,6 +70,73 @@ pub struct FuseCord {
 /// element of the game" (§1.3-ו).
 pub const FUSE_BURN_RATE: f32 = 45.0;
 
+/// Cosmetic-only frame counter for `fuse_cord`'s 3-image flicker loop
+/// (`assets/parts/fuse_cord_{0,1,2}.png`) — kept headless-safe (a plain
+/// `u8` + a hand-rolled tick counter, no `AssetServer`) so it lives
+/// alongside [`FuseCord`] itself; the actual texture swap is
+/// `render::PartArtPlugin`'s job, real-app-only. Only advances while
+/// `FuseCord.is_burning` — there's no "unlit" art (the only frames
+/// generated all show *some* flame at the tip), so an unlit fuse just
+/// holds frame 0, which is the smallest one.
+#[derive(Component, Clone, Copy, Default)]
+pub struct FuseFlicker {
+    pub frame: u8,
+    ticks_until_next: u32,
+}
+
+/// docs/GDD.md's fuse-burn rate is per-second; at a fixed fuse timestep
+/// this is "every ~0.12s", picked to read as a flicker rather than a slow
+/// crossfade or a strobe.
+const FUSE_FLICKER_TICKS: u32 = (0.12 / FIXED_DT) as u32;
+
+fn advance_fuse_flicker(mut fuses: Query<(&FuseCord, &mut FuseFlicker)>) {
+    for (fuse, mut flicker) in &mut fuses {
+        if !fuse.is_burning {
+            flicker.frame = 0;
+            flicker.ticks_until_next = 0;
+            continue;
+        }
+        if flicker.ticks_until_next == 0 {
+            flicker.frame = (flicker.frame + 1) % 3;
+            flicker.ticks_until_next = FUSE_FLICKER_TICKS;
+        } else {
+            flicker.ticks_until_next -= 1;
+        }
+    }
+}
+
+/// A short-lived, purely-visual stand-in for a just-detonated
+/// `charge_barrel` (docs/GDD.md §1.3-ו/A08: the real barrel entity
+/// despawns itself the instant it detonates, so there's nothing left to
+/// play an "explosion frame" on) — `thermal_update_system` spawns one of
+/// these at the barrel's last position instead. Headless-safe (a plain
+/// tick counter, same style as [`FuseFlicker`], no `AssetServer`);
+/// `render::PartArtPlugin` is what actually puts
+/// `assets/parts/charge_barrel_explosion.png` on it.
+#[derive(Component)]
+pub struct ExplosionEffect {
+    ticks_remaining: u32,
+}
+
+/// Long enough to actually read as a puff, short enough not to linger.
+const EXPLOSION_EFFECT_TICKS: u32 = (0.25 / FIXED_DT) as u32;
+
+impl Default for ExplosionEffect {
+    fn default() -> Self {
+        ExplosionEffect { ticks_remaining: EXPLOSION_EFFECT_TICKS }
+    }
+}
+
+fn tick_explosion_effects(mut commands: Commands, mut effects: Query<(Entity, &mut ExplosionEffect)>) {
+    for (entity, mut effect) in &mut effects {
+        if effect.ticks_remaining == 0 {
+            commands.entity(entity).despawn();
+        } else {
+            effect.ticks_remaining -= 1;
+        }
+    }
+}
+
 /// `charge_barrel` (docs/GDD.md §1.3-ו): detonates once, the first tick it
 /// falls within *some other* THERMAL source's own broadcast radius
 /// (docs/GDD.md §1.4.3 — proximity is always checked against the emitting
@@ -289,6 +356,10 @@ fn thermal_update_system(
                 commands.entity(other).despawn();
             }
         }
+        commands.spawn((
+            ExplosionEffect::default(),
+            Transform::from_translation(transform.translation),
+        ));
         commands.entity(entity).despawn();
     }
 
@@ -317,6 +388,10 @@ impl Plugin for AtmospherePlugin {
             FixedUpdate,
             thermal_update_system.in_set(SimSet::ThermalUpdate),
         )
-        .add_systems(FixedUpdate, wind_field_system.in_set(SimSet::FieldForces));
+        .add_systems(FixedUpdate, wind_field_system.in_set(SimSet::FieldForces))
+        .add_systems(
+            FixedUpdate,
+            (advance_fuse_flicker, tick_explosion_effects).in_set(SimSet::ThermalUpdate),
+        );
     }
 }

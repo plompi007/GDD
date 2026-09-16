@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 
-use crate::atmosphere::FuseCord;
+use crate::atmosphere::{FuseCord, FuseFlicker};
 use crate::part::{PartDef, ShapeSpec};
 
 pub fn attach(commands: &mut Commands, entity: Entity, def: &PartDef) {
@@ -15,13 +15,16 @@ pub fn attach(commands: &mut Commands, entity: Entity, def: &PartDef) {
     };
     let half = length / 2.0;
 
-    commands.entity(entity).insert(FuseCord {
-        length,
-        in_offset: Vec2::new(-half, 0.0),
-        out_offset: Vec2::new(half, 0.0),
-        ignite_radius: def.thermal_radius.unwrap_or(8.0),
-        burn_progress: 0.0,
-        is_burning: false,
-        burning_from_in: true,
-    });
+    commands.entity(entity).insert((
+        FuseCord {
+            length,
+            in_offset: Vec2::new(-half, 0.0),
+            out_offset: Vec2::new(half, 0.0),
+            ignite_radius: def.thermal_radius.unwrap_or(8.0),
+            burn_progress: 0.0,
+            is_burning: false,
+            burning_from_in: true,
+        },
+        FuseFlicker::default(),
+    ));
 }

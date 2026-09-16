@@ -35,7 +35,21 @@ use crate::sim::body_factory::PartType;
 /// just gets the correct art on screen at rest. `gear_large` and `candle`
 /// have no usable art yet (the gear_large generation came back wrong, and
 /// candle was only ever a single non-transparent test image) so both still
-/// fall through to the procedural placeholder below.
+/// fall through to the procedural placeholder below. `fuse_cord` is
+/// deliberately excluded too, despite having generated frames on disk
+/// (`assets/parts/fuse_cord_{0,1,2}.png`, still used by the flicker-*state*
+/// machinery in `atmosphere.rs`/`sync_fuse_cord_sprite`): that art is a
+/// diagonal squiggle on a near-square canvas (~1.3:1), but the part's own
+/// collider is a 100×6 sliver (~16.7:1) — forcing `custom_size` to the
+/// collider's exact box squashes the art ~13x vertically, past the point
+/// where its thin curved lines survive at all (verified in-game: the fuse
+/// rendered as literally nothing between the candle and the barrel). Fixing
+/// this needs better-fitting source art, not a sizing formula — a uniform
+/// "contain" fit would just make the fuse balloon to ~10x its actual
+/// length instead. Every other elongated part's art (`conveyor`,
+/// `plank_wood`, `beam_steel`, `lever_seesaw`) sits at a much milder
+/// 1.6–2.2x mismatch on a *solid-fill* shape, which stays visible under the
+/// same squash — confirmed by `plank_wood` rendering correctly in-game.
 pub fn static_texture_for(part_type: &str) -> Option<&'static str> {
     match part_type {
         "ball_wood" => Some("parts/ball_wood.png"),
@@ -52,7 +66,6 @@ pub fn static_texture_for(part_type: &str) -> Option<&'static str> {
         "cutter_shears" => Some("parts/cutter_shears_idle.png"),
         "fan_blower" => Some("parts/fan_blower.png"),
         "floor_ground" => Some("parts/floor_ground.png"),
-        "fuse_cord" => Some("parts/fuse_cord_0.png"),
         "gear_small" => Some("parts/gear_small.png"),
         "goal_zone" => Some("parts/goal_zone.png"),
         "lever_seesaw" => Some("parts/lever_seesaw.png"),
@@ -319,13 +332,140 @@ fn apply_real_art_system(
     }
 }
 
+/// `switch_plate_idle.png` while off, `switch_plate_action.png` while on —
+/// reads the exact same `SwitchPlate.is_on` the energy graph itself already
+/// drives, so this can never disagree with the actual electrical state.
+fn sync_switch_plate_sprite(
+    asset_server: Res<AssetServer>,
+    mut switches: Query<(&crate::parts::switch_plate::SwitchPlate, &mut Sprite)>,
+) {
+    for (switch, mut sprite) in &mut switches {
+        let path = if switch.is_on {
+            "parts/switch_plate_action.png"
+        } else {
+            "parts/switch_plate_idle.png"
+        };
+        sprite.image = asset_server.load(path);
+    }
+}
+
+/// `cutter_shears_action.png` once `CutterShears.triggered` flips — stays
+/// that way, matching the part's own real one-shot-then-done behavior.
+fn sync_cutter_shears_sprite(
+    asset_server: Res<AssetServer>,
+    mut cutters: Query<(&crate::parts::cutter_shears::CutterShears, &mut Sprite)>,
+) {
+    for (cutter, mut sprite) in &mut cutters {
+        let path = if cutter.triggered {
+            "parts/cutter_shears_action.png"
+        } else {
+            "parts/cutter_shears_idle.png"
+        };
+        sprite.image = asset_server.load(path);
+    }
+}
+
+/// `punch_arm_action.png` for exactly as long as something is actually
+/// touching it (`PunchArm.was_touching`, the same field the impulse system
+/// itself uses) — extended while it's actually shoving something, retracted
+/// otherwise.
+fn sync_punch_arm_sprite(
+    asset_server: Res<AssetServer>,
+    mut arms: Query<(&crate::parts::punch_arm::PunchArm, &mut Sprite)>,
+) {
+    for (arm, mut sprite) in &mut arms {
+        let path = if arm.was_touching {
+            "parts/punch_arm_action.png"
+        } else {
+            "parts/punch_arm_idle.png"
+        };
+        sprite.image = asset_server.load(path);
+    }
+}
+
+/// `springboard_action.png` for the short window `SpringboardFlash` marks
+/// after a real bounce (see `parts::springboard`'s own docs on why this
+/// needed a new component: unlike the other three, plain restitution gives
+/// no existing signal to read).
+fn sync_springboard_sprite(
+    asset_server: Res<AssetServer>,
+    mut boards: Query<
+        (&mut Sprite, Has<crate::parts::springboard::SpringboardFlash>),
+        With<crate::parts::springboard::Springboard>,
+    >,
+) {
+    for (mut sprite, flashing) in &mut boards {
+        let path = if flashing {
+            "parts/springboard_action.png"
+        } else {
+            "parts/springboard_idle.png"
+        };
+        sprite.image = asset_server.load(path);
+    }
+}
+
+/// Cycles through `fuse_cord`'s 3 flicker frames per `FuseFlicker.frame` —
+/// **currently a no-op**, see `static_texture_for`'s own docs on why that
+/// art isn't actually applied yet (a real aspect-ratio mismatch that made
+/// the fuse invisible in-game, not just a style nitpick). Left in place
+/// (rather than deleted) so turning this back on is a one-line change
+/// (`static_texture_for`'s `fuse_cord` arm) once better-fitting art exists;
+/// `FuseFlicker` itself keeps advancing and is tested regardless.
+fn sync_fuse_cord_sprite(
+    asset_server: Res<AssetServer>,
+    mut fuses: Query<(&crate::atmosphere::FuseFlicker, &mut Sprite)>,
+) {
+    if static_texture_for("fuse_cord").is_none() {
+        return;
+    }
+    for (flicker, mut sprite) in &mut fuses {
+        let path = match flicker.frame {
+            0 => "parts/fuse_cord_0.png",
+            1 => "parts/fuse_cord_1.png",
+            _ => "parts/fuse_cord_2.png",
+        };
+        sprite.image = asset_server.load(path);
+    }
+}
+
+/// Puts the real explosion-puff art on every `atmosphere::ExplosionEffect`
+/// the instant `thermal_update_system` spawns one (see that component's own
+/// docs on why it exists as a separate entity rather than an animation
+/// frame on the barrel itself). A fixed visual size, not derived from
+/// `blast_radius` — this is a cosmetic puff, not a hitbox, and doesn't need
+/// to be pixel-accurate to the actual blast range.
+fn spawn_explosion_sprite(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    spawned: Query<Entity, Added<crate::atmosphere::ExplosionEffect>>,
+) {
+    for entity in &spawned {
+        commands.entity(entity).insert(Sprite {
+            image: asset_server.load("parts/charge_barrel_explosion.png"),
+            custom_size: Some(Vec2::splat(60.0)),
+            ..default()
+        });
+    }
+}
+
 /// See [`apply_real_art_system`]'s own docs for why this is never added to
 /// a headless test app — only `app.rs`'s real `App::new()` uses it.
 pub struct PartArtPlugin;
 
 impl Plugin for PartArtPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, apply_real_art_system);
+        app.add_systems(
+            Update,
+            (
+                apply_real_art_system,
+                sync_switch_plate_sprite,
+                sync_cutter_shears_sprite,
+                sync_punch_arm_sprite,
+                sync_springboard_sprite,
+                sync_fuse_cord_sprite,
+                spawn_explosion_sprite,
+            ),
+        );
     }
 }
 
