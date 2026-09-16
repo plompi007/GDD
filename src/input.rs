@@ -498,7 +498,27 @@ fn end_drag_system(
                 params: Default::default(),
             };
             editor_state.level.preplaced_parts.push(new_part.clone());
-            spawn_placed_part(&mut commands, &mut meshes, &mut materials, &registry, &new_part);
+            let entity =
+                spawn_placed_part(&mut commands, &mut meshes, &mut materials, &registry, &new_part);
+            // docs/GDD.md §3.9.6: placement gets a scale-bounce + a
+            // category-colored flash, both before any text/UI confirms
+            // the drop — see `juice`'s own docs on why this is
+            // headless-safe rather than gated like the real-art swap.
+            commands.entity(entity).insert(crate::juice::JuiceBounce::default());
+            if let Some(def) = registry.get(&new_part.part_type) {
+                crate::juice::spawn_flash(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    snapped,
+                    crate::juice::FlashSpec {
+                        color: crate::sim::body_factory::placeholder_color(def),
+                        start_radius: 8.0,
+                        end_radius: 36.0,
+                        duration_ms: 160.0,
+                    },
+                );
+            }
         }
         DragSource::ExistingPart { entity } => {
             // `update_drag_system` already grid-snapped this entity's live
