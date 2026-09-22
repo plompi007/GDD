@@ -24,6 +24,7 @@
 
 use bevy::prelude::*;
 
+use crate::energy_graph::WireConnection;
 use crate::gear_train::{BeltConnection, GearNode};
 use crate::part::EnergyType;
 use crate::rope_network::{rope_world_points, RopeConnection};
@@ -78,10 +79,24 @@ fn draw_belts(
     }
 }
 
+/// Straight line, center to center — unlike a belt, a wire doesn't wrap
+/// around anything to start/end at a rim offset from, and unlike a rope
+/// it has no pulleys to route through (`WireConnection` only ever has the
+/// two endpoints `energy_graph.rs`'s own doc comment describes).
+fn draw_wires(mut gizmos: Gizmos, wires: Query<&WireConnection>, transforms: Query<&Transform>) {
+    let color = energy_color(EnergyType::Electric);
+    for wire in &wires {
+        let (Ok(from_t), Ok(to_t)) = (transforms.get(wire.from), transforms.get(wire.to)) else {
+            continue;
+        };
+        glow_line(&mut gizmos, from_t.translation.truncate(), to_t.translation.truncate(), color);
+    }
+}
+
 pub struct ConnectionVisualsPlugin;
 
 impl Plugin for ConnectionVisualsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (draw_ropes, draw_belts));
+        app.add_systems(Update, (draw_ropes, draw_belts, draw_wires));
     }
 }

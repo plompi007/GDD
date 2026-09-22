@@ -211,6 +211,13 @@ fn spawn_connections(
                     .map(|p| p.id.as_str())
                     .unwrap_or("in");
                 energy.connect(&conn.from.part_id, from_port, &conn.to.part_id, to_port);
+                commands.spawn((
+                    crate::energy_graph::WireConnection {
+                        from: id_to_entity[&conn.from.part_id],
+                        to: id_to_entity[&conn.to.part_id],
+                    },
+                    LevelEntity,
+                ));
             }
             ConnectionKind::Belt => {
                 let from = id_to_entity[&conn.from.part_id];

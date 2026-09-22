@@ -85,6 +85,22 @@ fn propagate_energy_graph(mut graph: ResMut<EnergyGraph>) {
     graph.propagate();
 }
 
+/// A purely cosmetic record of which two live entities a `WIRE` connection
+/// joins — unlike [`EnergyGraph`] itself (keyed by part-id strings, the
+/// real electrical logic), this exists only so `render_fx.rs` has
+/// `Transform`s to draw a line between. Nothing in this module or
+/// `sim::SimSet::EnergyPropagate` reads it; `level_load.rs` and
+/// `input.rs`'s connect-tool spawn one alongside every real
+/// `EnergyGraph::connect()` call, mirroring exactly how
+/// `rope_network::RopeConnection`/`gear_train::BeltConnection` already
+/// pair a physics-driving component with the entities its own line
+/// should connect.
+#[derive(Component)]
+pub struct WireConnection {
+    pub from: Entity,
+    pub to: Entity,
+}
+
 /// Registers [`EnergyGraph`] and wires its propagation step into
 /// `SimSet::EnergyPropagate` (docs/GDD.md §2.4 step 1). Source systems
 /// (`outlet_power`'s, etc.) should also live in `SimSet::EnergyPropagate`;

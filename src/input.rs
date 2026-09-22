@@ -416,6 +416,10 @@ fn connect_tool_system(
             let from_port = def_a.ports.first().map(|p| p.id.as_str()).unwrap_or("out");
             let to_port = def_b.ports.first().map(|p| p.id.as_str()).unwrap_or("in");
             energy.connect(&id_a, from_port, &id_b, to_port);
+            commands.spawn((
+                crate::energy_graph::WireConnection { from: first, to: entity },
+                LevelEntity,
+            ));
             editor_state.level.connections.push(connection);
         }
     }
