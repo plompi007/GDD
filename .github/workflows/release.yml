@@ -1,0 +1,113 @@
+name: Desktop release (M10/M11)
+
+# docs/GDD.md §7.8's "release checklist": desktop can ship via GitHub
+# Releases without waiting on any external account (unlike itch.io/Play
+# Console, both blocked on the developer's own signup — see that section).
+# This reuses `desktop.yml`'s own proven build-and-package steps (same
+# `dist/` layout: the release binary with `assets/` copied next to it,
+# the fix for `bevy_asset` not finding fonts when `CARGO_MANIFEST_DIR`
+# isn't set — see that workflow's own comments) and, instead of just
+# uploading a CI artifact, attaches a zip per OS to a real GitHub Release
+# a player can find and download from the repo's Releases page.
+#
+# Triggers only on a `v*` tag push (e.g. `v0.1.0`) — an ordinary commit
+# to a branch never creates a public release. Push a tag when you're
+# ready to publish: `git tag v0.1.0 && git push origin v0.1.0`.
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset_name: chainworks-linux-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset_name: chainworks-macos-aarch64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset_name: chainworks-windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # Same package list `desktop.yml` installs — see that workflow's
+      # own comment on why these are needed at build+link time.
+      - name: Install Linux windowing/audio/GPU dev libraries
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxkbcommon-dev libwayland-dev libudev-dev \
+            libasound2-dev libxi-dev libgl1-mesa-dev libvulkan-dev
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+
+      - run: cargo build --release --target ${{ matrix.target }}
+
+      # `dist/` layout matches `desktop.yml`'s own artifact exactly (the
+      # binary needs `assets/` next to it, not just present in the repo
+      # checkout — see that workflow's comment on why), then zipped into
+      # one downloadable file per OS for the Release page.
+      - name: Stage a real "download and run" release folder
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp "target/${{ matrix.target }}/release/chainworks.exe" dist/
+          else
+            cp "target/${{ matrix.target }}/release/chainworks" dist/
+          fi
+          cp -r assets dist/assets
+
+      - name: Zip the release folder
+        shell: bash
+        run: |
+          cd dist
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            7z a "../${{ matrix.asset_name }}.zip" .
+          else
+            zip -r "../${{ matrix.asset_name }}.zip" .
+          fi
+
+      - name: Upload zipped build (workflow_dispatch runs, or as a release-job input)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}.zip
+          if-no-files-found: error
+
+  publish-release:
+    # Only on an actual tag push — `workflow_dispatch` runs above build
+    # and upload as ordinary CI artifacts (useful to sanity-check the zip
+    # contents) but never publish a public Release.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create the GitHub Release with all three zips attached
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*/*.zip
+          draft: true
+          generate_release_notes: true
