@@ -5,15 +5,25 @@
 //! `ALL_LEVELS`, a player's save can't be baked in at compile time via
 //! `include_str!`, since it doesn't exist until they make it.
 //!
-//! **Desktop-only for now.** [`default_saves_dir`] resolves to a `saves/`
-//! folder relative to the current working directory, which is fine for a
-//! desktop build run from its own directory but is *not* yet a real
-//! Android app-private storage path — that needs the JNI Activity
-//! context (`Context.getFilesDir()`), not something any plain-Rust path
-//! API can resolve. Flagged as a known gap in docs/GDD.md's Sandbox
-//! spec, not solved here; every function below still takes an explicit
-//! directory/path rather than assuming this default, so the Android
-//! resolution can plug in later without changing this module at all.
+//! **Android app-private storage, via bevy's own public API.**
+//! [`default_saves_dir`] used to always resolve to `saves/` relative to
+//! the current working directory — fine for a desktop build run from its
+//! own directory, but on Android that's not a real writable, app-private
+//! location (nothing guarantees the process's CWD is even writable
+//! there). The real path needs the JNI Activity context
+//! (`Context.getFilesDir()`), which isn't something a plain-Rust path
+//! API can resolve on its own — but `bevy_winit`'s Android backend
+//! already holds exactly that, via the `android-activity` crate it
+//! depends on for the platform event loop, and re-exports it as
+//! `bevy::window::ANDROID_APP: OnceLock<AndroidApp>` for app code to use
+//! for precisely this kind of thing. `AndroidApp::internal_data_path()`
+//! is the real `Context.getFilesDir()` equivalent, not a guess or an
+//! env-var convention that happens to often work — so the `#[cfg(target_os
+//! = "android")]` branch below is a real fix, not a placeholder. It can't
+//! be exercised by `cargo test` on this (or any non-Android) dev
+//! machine, though — like `render.rs`/`render_fx.rs`'s real-renderer-only
+//! systems, it can only be verified by an actual run on-device (M3.5,
+//! still open for other reasons — see docs/GDD.md).
 
 use std::fmt;
 use std::fs;
@@ -21,9 +31,57 @@ use std::path::{Path, PathBuf};
 
 use crate::level_file_format::LevelFile;
 
-/// Desktop-only — see this module's own doc comment.
+/// Real Android app-private storage — see this module's own doc comment.
+/// Falls back to the same relative `saves/` the desktop branch uses if
+/// `ANDROID_APP` hasn't been populated yet (shouldn't happen once the
+/// app's event loop is running, but a missing directory to write into is
+/// a much friendlier failure than a panic).
+#[cfg(target_os = "android")]
+pub fn default_saves_dir() -> PathBuf {
+    bevy::window::ANDROID_APP
+        .get()
+        .and_then(|app| app.internal_data_path())
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("saves")
+}
+
+#[cfg(not(target_os = "android"))]
 pub fn default_saves_dir() -> PathBuf {
     PathBuf::from("saves")
+}
+
+/// Maximum length for a player-typed save name — generous enough for a
+/// real title, short enough that it can't be used to build an absurdly
+/// long path. `pub` so `ui/editor_tools.rs`'s live keystroke handler can
+/// cap the buffer at the same length `sanitize_file_stem` enforces,
+/// rather than letting it grow unbounded and only get truncated later.
+pub const MAX_SAVE_NAME_LEN: usize = 40;
+
+/// Filters a player-typed save name down to a safe filename component:
+/// only ASCII letters/digits/space/`_`/`-` survive, trimmed, capped to
+/// [`MAX_SAVE_NAME_LEN`]. Returns `None` if nothing safe is left (empty
+/// input, or input that was entirely punctuation/whitespace/non-ASCII) —
+/// callers fall back to a sensible default (the level's own id) rather
+/// than writing to a file named `""`.
+///
+/// This exists because [`save_level`] joins its `file_stem` argument
+/// directly onto a directory path — once save names come from a player
+/// typing into a UI text field (`ui/editor_tools.rs`'s `SaveNameField`)
+/// instead of always being the level's own `id`, an unfiltered name like
+/// `"../../etc/passwd"` would be a real path-traversal write, not just
+/// unpolished input handling.
+pub fn sanitize_file_stem(raw: &str) -> Option<String> {
+    let filtered: String = raw
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == ' ' || *c == '_' || *c == '-')
+        .take(MAX_SAVE_NAME_LEN)
+        .collect();
+    let trimmed = filtered.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
 }
 
 #[derive(Debug)]
@@ -162,6 +220,22 @@ mod tests {
         let found = list_saved_levels(&scratch.0);
         assert_eq!(found.len(), 2, "should find exactly the two .json saves, not notes.txt");
         assert!(found.iter().all(|p| p.extension().unwrap() == "json"));
+    }
+
+    #[test]
+    fn sanitize_file_stem_blocks_path_traversal_and_keeps_safe_names_intact() {
+        assert_eq!(sanitize_file_stem("Bridge Run"), Some("Bridge Run".to_string()));
+        assert_eq!(sanitize_file_stem("  padded  "), Some("padded".to_string()));
+        assert_eq!(
+            sanitize_file_stem("../../etc/passwd"),
+            Some("etcpasswd".to_string()),
+            "dots and slashes are stripped entirely, so it can never escape the saves dir"
+        );
+        assert_eq!(sanitize_file_stem(""), None);
+        assert_eq!(sanitize_file_stem("   "), None);
+        assert_eq!(sanitize_file_stem("!!!///$$$"), None);
+        let long_input = "a".repeat(200);
+        assert_eq!(sanitize_file_stem(&long_input).unwrap().len(), MAX_SAVE_NAME_LEN);
     }
 
     #[test]

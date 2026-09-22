@@ -17,6 +17,7 @@ use crate::parts::PartsPlugin;
 use crate::render::PartArtPlugin;
 use crate::render_fx::ConnectionVisualsPlugin;
 use crate::sim::SimPlugin;
+use crate::ui::editor_tools::TextInputFocus;
 use crate::ui::UiShellPlugin;
 use crate::win_conditions::WinConditionsPlugin;
 
@@ -69,11 +70,21 @@ fn spawn_camera(mut commands: Commands) {
 /// from any state. Not the only way to control the game anymore, just a
 /// convenience; touch users get the same level-cycling via `ui::hud`'s
 /// ‹/› buttons instead of N/P (a phone has no keyboard).
+///
+/// Every function below bails out first if `ui::editor_tools`'s
+/// `SaveNameField` currently has keyboard focus — otherwise typing a
+/// save name like `"Bridge Run"` would also reset the level (R), cycle
+/// it (N/P), or jump to Sandbox (B) as an unwanted side effect of the
+/// exact same keystrokes.
 fn dev_controls(
     keys: Res<ButtonInput<KeyCode>>,
     state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
+    text_focus: Res<TextInputFocus>,
 ) {
+    if text_focus.0 {
+        return;
+    }
     if keys.just_pressed(KeyCode::KeyR) {
         next_state.set(GameState::Edit);
         return;
@@ -97,7 +108,11 @@ fn cycle_level_keyboard(
     mut index: ResMut<LevelIndex>,
     mut editor_state: ResMut<EditorState>,
     mut next_state: ResMut<NextState<GameState>>,
+    text_focus: Res<TextInputFocus>,
 ) {
+    if text_focus.0 {
+        return;
+    }
     let delta: i32 = if keys.just_pressed(KeyCode::KeyN) {
         1
     } else if keys.just_pressed(KeyCode::KeyP) {
@@ -115,7 +130,11 @@ fn enter_sandbox_keyboard(
     keys: Res<ButtonInput<KeyCode>>,
     mut editor_state: ResMut<EditorState>,
     mut next_state: ResMut<NextState<GameState>>,
+    text_focus: Res<TextInputFocus>,
 ) {
+    if text_focus.0 {
+        return;
+    }
     if keys.just_pressed(KeyCode::KeyB) {
         enter_sandbox(&mut editor_state, &mut next_state);
     }
